@@ -196,3 +196,32 @@ body.focus .topbar, body.focus .status { display: none; }
     height: 26px;
   }
 }
+
+
+/* v8.1 click fixes */
+.spriteTeamBar,
+.spriteTeamBar *,
+.spriteEditor,
+.spriteEditor * {
+  pointer-events: auto;
+}
+
+.spriteTeamBar {
+  z-index: 25;
+}
+
+.spriteEditButton {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.spriteEditor {
+  z-index: 9999;
+}
+
+.spriteEditor input,
+.spriteEditor select,
+.spriteEditor button {
+  pointer-events: auto;
+}

@@ -1,6 +1,6 @@
 {
-  "name": "soullocke-webrtc-v8-sprite-overlay",
-  "version": "1.0.9",
+  "name": "soullocke-webrtc-v8-1-sprite-overlay",
+  "version": "1.1.0",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

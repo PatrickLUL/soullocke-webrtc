@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8-sprites";
+const APP_VERSION = "v8.1-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -215,11 +215,30 @@ function renderAllSpriteBars() {
 }
 
 function openSpriteEditor() {
+  console.log("openSpriteEditor clicked", { myId, joined });
   let existing = document.querySelector(".spriteEditor");
   if (existing) existing.remove();
 
-  const node = teamEditorTemplate.content.cloneNode(true);
-  const editor = node.querySelector(".spriteEditor");
+  let editor;
+  if (teamEditorTemplate && teamEditorTemplate.content) {
+    const node = teamEditorTemplate.content.cloneNode(true);
+    editor = node.querySelector(".spriteEditor");
+  } else {
+    editor = document.createElement("div");
+    editor.className = "spriteEditor";
+    editor.innerHTML = `
+      <div class="spriteEditorHeader">
+        <strong>Team bearbeiten</strong>
+        <button class="closeSpriteEditor" type="button">×</button>
+      </div>
+      <div class="spriteEditorSlots"></div>
+      <div class="spriteEditorActions">
+        <button class="clearSpriteTeam" type="button">Team leeren</button>
+        <button class="saveSpriteTeam" type="button">Speichern</button>
+      </div>
+    `;
+  }
+
   const slots = editor.querySelector(".spriteEditorSlots");
   const team = getTeam(myId);
 
@@ -569,8 +588,22 @@ shareBtn.addEventListener("click", async () => {
 stopBtn.addEventListener("click", stopSharing);
 qualitySelect.addEventListener("change", applyQualityToAllSenders);
 
-document.body.addEventListener("click", () => {
+document.body.addEventListener("click", (event) => {
   for (const id of activeStreams.keys()) resumeVideo(id);
+
+  const target = event.target;
+  if (target.closest && target.closest(".spriteEditButton")) {
+    event.preventDefault();
+    event.stopPropagation();
+    openSpriteEditor();
+  }
+
+  const slot = target.closest && target.closest(".spriteSlot.editable");
+  if (slot) {
+    event.preventDefault();
+    event.stopPropagation();
+    openSpriteEditor();
+  }
 });
 
 socket.on("connect", () => setStatus(`${APP_VERSION}: Socket verbunden.`));
