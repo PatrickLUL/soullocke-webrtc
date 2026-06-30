@@ -1,6 +1,6 @@
 {
-  "name": "soullocke-webrtc-stable-v2",
-  "version": "1.0.1",
+  "name": "soullocke-webrtc-stable-v3",
+  "version": "1.0.2",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

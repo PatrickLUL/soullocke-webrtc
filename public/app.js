@@ -46,9 +46,11 @@ function createTile(id, labelText, connected = false) {
   const name = clone.querySelector(".name");
   const video = clone.querySelector("video");
   const fullscreenBtn = clone.querySelector(".fullscreenBtn");
+  const playOverlay = clone.querySelector(".playOverlay");
 
   video.autoplay = true;
   video.muted = true;
+  video.defaultMuted = true;
   video.playsInline = true;
 
   tile.dataset.id = id;
@@ -57,9 +59,10 @@ function createTile(id, labelText, connected = false) {
 
   fullscreenBtn.addEventListener("click", () => toggleFocus(tile));
   video.addEventListener("dblclick", () => toggleFocus(tile));
+  playOverlay.addEventListener("click", () => resumeVideo(id));
 
   grid.appendChild(tile);
-  tiles.set(id, { tile, name, video, debug: clone.querySelector?.(".debug") });
+  tiles.set(id, { tile, name, video, playOverlay });
   return tiles.get(id);
 }
 
@@ -86,6 +89,24 @@ function rebuildTiles() {
   if (localStream) attachStreamToTile(myId, localStream);
 }
 
+async function resumeVideo(playerId) {
+  const data = tiles.get(playerId);
+  if (!data || !data.video.srcObject) return;
+
+  data.video.muted = true;
+  data.video.defaultMuted = true;
+  data.video.playsInline = true;
+
+  try {
+    await data.video.play();
+    data.tile.classList.remove("needs-play");
+    setStatus("Video gestartet.");
+  } catch (e) {
+    console.warn("manual play failed", e);
+    setStatus("Video konnte noch nicht gestartet werden. Bitte einmal in die Kachel klicken.");
+  }
+}
+
 function attachStreamToTile(playerId, stream) {
   activeStreams.set(playerId, stream);
 
@@ -97,18 +118,20 @@ function attachStreamToTile(playerId, stream) {
 
   data.video.srcObject = stream;
   data.video.muted = true;
-  data.video.autoplay = true;
+  data.video.defaultMuted = true;
   data.video.playsInline = true;
+  data.tile.classList.add("has-video", "connected");
 
-  const playPromise = data.video.play();
-  if (playPromise && typeof playPromise.catch === "function") {
-    playPromise.catch(err => {
-      console.warn("video.play blocked", err);
-      setStatus("Video empfangen, aber Browser blockiert autoplay. Klicke einmal auf die Seite.");
+  data.video.onloadedmetadata = () => resumeVideo(playerId);
+  data.video.oncanplay = () => resumeVideo(playerId);
+
+  const promise = data.video.play();
+  if (promise && promise.catch) {
+    promise.catch(() => {
+      data.tile.classList.add("needs-play");
+      setStatus("Video empfangen. Klicke im schwarzen Feld auf „Video anzeigen“.");
     });
   }
-
-  data.tile.classList.add("has-video", "connected");
 }
 
 function clearStreamFromTile(playerId) {
@@ -116,7 +139,7 @@ function clearStreamFromTile(playerId) {
   const data = tiles.get(playerId);
   if (!data) return;
   data.video.srcObject = null;
-  data.tile.classList.remove("has-video");
+  data.tile.classList.remove("has-video", "needs-play");
 }
 
 function closePeer(map, peerId) {
@@ -150,8 +173,7 @@ function createOutgoingPeer(viewerId) {
   };
 
   pc.onconnectionstatechange = () => {
-    console.log("outgoing", viewerId, pc.connectionState);
-    if (["failed", "closed"].includes(pc.connectionState)) closePeer(outgoingPeers, viewerId);
+    if (pc.connectionState === "failed" || pc.connectionState === "closed") closePeer(outgoingPeers, viewerId);
   };
 
   return pc;
@@ -163,7 +185,6 @@ function createIncomingPeer(streamerId) {
   incomingPeers.set(streamerId, pc);
 
   pc.ontrack = e => {
-    console.log("received track from", streamerId, e.track.kind, e.track.readyState);
     const stream = e.streams[0] || new MediaStream([e.track]);
     attachStreamToTile(streamerId, stream);
   };
@@ -173,12 +194,11 @@ function createIncomingPeer(streamerId) {
   };
 
   pc.onconnectionstatechange = () => {
-    console.log("incoming", streamerId, pc.connectionState);
     if (pc.connectionState === "connected") {
       const p = players.get(streamerId);
       setStatus(`Verbunden mit ${p?.name || "Mitspieler"}.`);
     }
-    if (["failed", "closed"].includes(pc.connectionState)) {
+    if (pc.connectionState === "failed" || pc.connectionState === "closed") {
       closePeer(incomingPeers, streamerId);
       clearStreamFromTile(streamerId);
     }
@@ -225,7 +245,6 @@ function stopSharing() {
   if (!localStream) return;
   for (const track of localStream.getTracks()) track.stop();
   localStream = null;
-  activeStreams.delete(myId);
   for (const id of outgoingPeers.keys()) closePeer(outgoingPeers, id);
   clearStreamFromTile(myId);
   shareBtn.disabled = !joined;
@@ -234,30 +253,25 @@ function stopSharing() {
   setStatus("Stream gestoppt.");
 }
 
-joinBtn.addEventListener("click", () => {
-  roomId = roomInput.value.trim() || randomRoomCode();
+function joinRoom() {
+  roomId = roomInput.value.trim() || getRoomFromUrl() || randomRoomCode();
   myName = nameInput.value.trim() || "Spieler";
   localStorage.setItem("soullockeName", myName);
 
-  if (!location.pathname.startsWith("/room/")) {
-    history.replaceState(null, "", `/room/${encodeURIComponent(roomId)}`);
-  }
-
+  history.replaceState(null, "", `/room/${encodeURIComponent(roomId)}`);
   socket.emit("join-room", { roomId, name: myName });
-});
+}
 
-document.body.addEventListener("click", () => {
-  for (const data of tiles.values()) {
-    if (data.video.srcObject) data.video.play().catch(() => {});
-  }
-});
-
+joinBtn.addEventListener("click", joinRoom);
 shareBtn.addEventListener("click", async () => {
   try { await startSharing(); }
   catch (e) { console.error(e); setStatus("Bildschirmfreigabe abgebrochen oder blockiert."); }
 });
-
 stopBtn.addEventListener("click", stopSharing);
+
+document.body.addEventListener("click", () => {
+  for (const id of activeStreams.keys()) resumeVideo(id);
+});
 
 socket.on("joined", data => {
   joined = true;
@@ -324,11 +338,6 @@ socket.on("peer-left", ({ peerId }) => {
   players.delete(peerId);
   clearStreamFromTile(peerId);
   rebuildTiles();
-});
-
-window.addEventListener("beforeunload", () => {
-  for (const id of outgoingPeers.keys()) closePeer(outgoingPeers, id);
-  for (const id of incomingPeers.keys()) closePeer(incomingPeers, id);
 });
 
 const roomFromUrl = getRoomFromUrl();

@@ -20,8 +20,8 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .fullscreenBtn { position: absolute; z-index: 3; top: 9px; right: 10px; width: 36px; height: 34px; padding: 0; color: white; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.25); opacity: .8; }
 .empty { position: absolute; inset: 0; display: grid; place-items: center; opacity: .45; font-weight: 700; pointer-events: none; }
 .tile.has-video .empty { display: none; }
-.debug { position: absolute; left: 10px; bottom: 8px; color: #aaa; font-size: 12px; background: rgba(0,0,0,.45); padding: 3px 6px; border-radius: 6px; display: none; }
-body.show-debug .debug { display: block; }
+.playOverlay { display: none; position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; color: #111; box-shadow: 0 6px 30px rgba(0,0,0,.45); }
+.tile.needs-play .playOverlay { display: block; }
 body.focus .tile { display: none; }
 body.focus .tile.focused { display: block; position: fixed; inset: 0; z-index: 20; border-radius: 0; border: 0; }
 body.focus .topbar, body.focus .status { display: none; }
