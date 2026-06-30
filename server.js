@@ -66,13 +66,13 @@ io.on("connection", socket => {
     socket.to(roomId).emit("peer-stopped-sharing", { peerId: socket.id });
   });
 
-  socket.on("webrtc-description", ({ to, description }) => {
-    io.to(to).emit("webrtc-description", { from: socket.id, description });
+  socket.on("quality-changed", ({ quality }) => {
+    const roomId = socket.data.roomId;
+    if (roomId) socket.to(roomId).emit("peer-quality-changed", { peerId: socket.id, quality });
   });
 
-  socket.on("webrtc-ice", ({ to, candidate }) => {
-    io.to(to).emit("webrtc-ice", { from: socket.id, candidate });
-  });
+  socket.on("webrtc-description", ({ to, description }) => io.to(to).emit("webrtc-description", { from: socket.id, description }));
+  socket.on("webrtc-ice", ({ to, candidate }) => io.to(to).emit("webrtc-ice", { from: socket.id, candidate }));
 
   socket.on("disconnect", () => {
     const roomId = socket.data.roomId;

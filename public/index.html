@@ -4,17 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Soullocke Private Game View</title>
-  <link rel="stylesheet" href="/style.css?v=5" />
+  <link rel="stylesheet" href="/style.css?v=6" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <h1>Soullocke Private Game View <span id="versionBadge">v5-perfect</span></h1>
+      <h1>Soullocke Private Game View <span id="versionBadge">v6-performance</span></h1>
       <p>Private Spielansicht für bis zu 4 Spieler</p>
     </div>
     <div class="controls">
       <input id="roomInput" placeholder="Raumcode" autocomplete="off" />
       <input id="nameInput" placeholder="Dein Name" autocomplete="off" />
+      <select id="qualitySelect" title="Qualität für deinen Upload">
+        <option value="low">480p / 20 FPS</option>
+        <option value="medium" selected>720p / 30 FPS</option>
+        <option value="high">1080p / 60 FPS</option>
+      </select>
       <button id="joinBtn">Raum beitreten</button>
       <button id="shareBtn" disabled>Spiel freigeben</button>
       <button id="stopBtn" disabled>Stoppen</button>
@@ -33,6 +38,6 @@
     </section>
   </template>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=5"></script>
+  <script src="/app.js?v=6"></script>
 </body>
 </html>

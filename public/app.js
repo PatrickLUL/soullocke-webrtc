@@ -1,9 +1,10 @@
 
-const APP_VERSION = "v5-perfect";
+const APP_VERSION = "v6-performance";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
 const nameInput = document.querySelector("#nameInput");
+const qualitySelect = document.querySelector("#qualitySelect");
 const joinBtn = document.querySelector("#joinBtn");
 const shareBtn = document.querySelector("#shareBtn");
 const stopBtn = document.querySelector("#stopBtn");
@@ -22,6 +23,26 @@ const tiles = new Map();
 const peers = new Map();
 const activeStreams = new Map();
 const debugState = new Map();
+const frameCounters = new Map();
+const lastStats = new Map();
+
+const qualityProfiles = {
+  low: {
+    label: "480p / 20 FPS",
+    capture: { width: 854, height: 480, fps: 20 },
+    sender: { maxBitrate: 900000, maxFramerate: 20, scaleResolutionDownBy: 1.0 }
+  },
+  medium: {
+    label: "720p / 30 FPS",
+    capture: { width: 1280, height: 720, fps: 30 },
+    sender: { maxBitrate: 2500000, maxFramerate: 30, scaleResolutionDownBy: 1.0 }
+  },
+  high: {
+    label: "1080p / 60 FPS",
+    capture: { width: 1920, height: 1080, fps: 60 },
+    sender: { maxBitrate: 6000000, maxFramerate: 60, scaleResolutionDownBy: 1.0 }
+  }
+};
 
 const iceConfig = {
   iceServers: [
@@ -32,10 +53,16 @@ const iceConfig = {
 };
 
 function setStatus(text) { statusEl.textContent = text; }
+function getProfile() { return qualityProfiles[qualitySelect.value] || qualityProfiles.medium; }
 
 function setDebug(id, patch) {
   debugState.set(id, { ...(debugState.get(id) || {}), ...patch });
   renderDebug(id);
+}
+
+function formatMbps(value) {
+  if (!Number.isFinite(value)) return "-";
+  return `${value.toFixed(2)} Mbps`;
 }
 
 function renderDebug(id) {
@@ -51,9 +78,14 @@ function renderDebug(id) {
     `signal: ${s.signal || "-"}`,
     `track: ${s.track || "-"}`,
     `video: ${v.videoWidth || 0}x${v.videoHeight || 0}`,
-    `ready: ${v.readyState}`,
-    `paused: ${v.paused}`
-  ].join("\n");
+    `fps: ${s.fps || "-"}`,
+    `bitrate: ${s.bitrate || "-"}`,
+    `rtt: ${s.rtt || "-"}`,
+    `jitter: ${s.jitter || "-"}`,
+    `packetsLost: ${s.packetsLost ?? "-"}`,
+    `framesDropped: ${s.framesDropped ?? "-"}`,
+    `quality: ${s.quality || "-"}`
+  ].join("\\n");
 }
 
 function getRoomFromUrl() {
@@ -117,7 +149,6 @@ function rebuildTiles() {
 async function resumeVideo(playerId) {
   const data = tiles.get(playerId);
   if (!data || !data.video.srcObject) return;
-
   try {
     data.video.muted = true;
     data.video.defaultMuted = true;
@@ -128,6 +159,38 @@ async function resumeVideo(playerId) {
     data.tile.classList.add("needs-play");
   }
   renderDebug(playerId);
+}
+
+function startFpsCounter(playerId) {
+  const data = tiles.get(playerId);
+  if (!data || !data.video) return;
+
+  const counter = { frames: 0, lastTime: performance.now(), running: true };
+  frameCounters.set(playerId, counter);
+
+  const callback = () => {
+    if (!counter.running) return;
+    counter.frames += 1;
+    const now = performance.now();
+    const diff = now - counter.lastTime;
+    if (diff >= 1000) {
+      const fps = counter.frames * 1000 / diff;
+      counter.frames = 0;
+      counter.lastTime = now;
+      setDebug(playerId, { fps: fps.toFixed(1) });
+    }
+    if (data.video.requestVideoFrameCallback) data.video.requestVideoFrameCallback(callback);
+    else requestAnimationFrame(callback);
+  };
+
+  if (data.video.requestVideoFrameCallback) data.video.requestVideoFrameCallback(callback);
+  else requestAnimationFrame(callback);
+}
+
+function stopFpsCounter(playerId) {
+  const c = frameCounters.get(playerId);
+  if (c) c.running = false;
+  frameCounters.delete(playerId);
 }
 
 function attachStreamToTile(playerId, stream) {
@@ -153,12 +216,15 @@ function attachStreamToTile(playerId, stream) {
   data.video.onresize = () => renderDebug(playerId);
   data.video.ontimeupdate = () => renderDebug(playerId);
 
+  stopFpsCounter(playerId);
+  startFpsCounter(playerId);
   resumeVideo(playerId);
   renderDebug(playerId);
 }
 
 function clearStreamFromTile(playerId) {
   activeStreams.delete(playerId);
+  stopFpsCounter(playerId);
   const data = tiles.get(playerId);
   if (!data) return;
   data.video.srcObject = null;
@@ -166,16 +232,37 @@ function clearStreamFromTile(playerId) {
   renderDebug(playerId);
 }
 
+async function applySenderQuality(peerId) {
+  const item = peers.get(peerId);
+  if (!item) return;
+  const profile = getProfile();
+
+  for (const sender of item.pc.getSenders()) {
+    if (!sender.track || sender.track.kind !== "video") continue;
+    const params = sender.getParameters();
+    if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+    params.encodings[0].maxBitrate = profile.sender.maxBitrate;
+    params.encodings[0].maxFramerate = profile.sender.maxFramerate;
+    params.encodings[0].scaleResolutionDownBy = profile.sender.scaleResolutionDownBy;
+
+    try {
+      await sender.setParameters(params);
+      setDebug(peerId, { quality: profile.label });
+    } catch (err) {
+      console.warn("setParameters failed", err);
+      setDebug(peerId, { quality: `${profile.label} setParameters failed` });
+    }
+  }
+}
+
 function addLocalTracks(peerId) {
   const item = peers.get(peerId);
   if (!item || !localStream) return;
-
   const senders = item.pc.getSenders();
   for (const track of localStream.getTracks()) {
-    if (!senders.some(sender => sender.track === track)) {
-      item.pc.addTrack(track, localStream);
-    }
+    if (!senders.some(sender => sender.track === track)) item.pc.addTrack(track, localStream);
   }
+  applySenderQuality(peerId);
 }
 
 function ensurePeer(peerId) {
@@ -183,15 +270,10 @@ function ensurePeer(peerId) {
   if (peers.has(peerId)) return peers.get(peerId);
 
   const pc = new RTCPeerConnection(iceConfig);
-  const item = {
-    pc,
-    makingOffer: false,
-    ignoreOffer: false,
-    polite: myId > peerId
-  };
-
+  const item = { pc, makingOffer: false, ignoreOffer: false, polite: myId > peerId };
   peers.set(peerId, item);
-  setDebug(peerId, { peer: "created", ice: pc.iceConnectionState, signal: pc.signalingState });
+
+  setDebug(peerId, { peer: "created", ice: pc.iceConnectionState, signal: pc.signalingState, quality: getProfile().label });
 
   pc.ontrack = event => {
     const stream = event.streams[0] || new MediaStream([event.track]);
@@ -247,34 +329,38 @@ async function restartIce(peerId) {
 }
 
 function ensureAllPeers() {
-  for (const p of players.values()) {
-    if (p.id !== myId) ensurePeer(p.id);
-  }
+  for (const p of players.values()) if (p.id !== myId) ensurePeer(p.id);
 }
 
 async function startSharing() {
+  const profile = getProfile();
   localStream = await navigator.mediaDevices.getDisplayMedia({
-    video: { width: { ideal: 854 }, height: { ideal: 480 }, frameRate: { ideal: 20, max: 30 } },
+    video: {
+      width: { ideal: profile.capture.width },
+      height: { ideal: profile.capture.height },
+      frameRate: { ideal: profile.capture.fps, max: profile.capture.fps }
+    },
     audio: false
   });
 
+  setDebug(myId, { quality: `${profile.label} local` });
   attachStreamToTile(myId, localStream);
+
   shareBtn.disabled = true;
   stopBtn.disabled = false;
 
   ensureAllPeers();
-  for (const p of players.values()) {
-    if (p.id !== myId) addLocalTracks(p.id);
-  }
+  for (const p of players.values()) if (p.id !== myId) addLocalTracks(p.id);
 
   socket.emit("start-sharing");
+  socket.emit("quality-changed", { quality: profile.label });
+
   localStream.getVideoTracks()[0].addEventListener("ended", stopSharing);
-  setStatus(`${APP_VERSION}: Spiel wird geteilt.`);
+  setStatus(`${APP_VERSION}: Spiel wird geteilt mit ${profile.label}.`);
 }
 
 function stopSharing() {
   if (!localStream) return;
-
   for (const track of localStream.getTracks()) track.stop();
 
   for (const item of peers.values()) {
@@ -291,6 +377,17 @@ function stopSharing() {
   setStatus(`${APP_VERSION}: Stream gestoppt.`);
 }
 
+async function applyQualityToAllSenders() {
+  const profile = getProfile();
+  localStorage.setItem("soullockeQuality", qualitySelect.value);
+
+  for (const peerId of peers.keys()) await applySenderQuality(peerId);
+  socket.emit("quality-changed", { quality: profile.label });
+
+  if (localStream) setStatus(`${APP_VERSION}: Upload auf ${profile.label}. Für Capture-Auflösung Stream neu starten.`);
+  else setStatus(`${APP_VERSION}: Qualität gewählt: ${profile.label}.`);
+}
+
 function joinRoom() {
   roomId = roomInput.value.trim() || getRoomFromUrl() || randomRoomCode();
   myName = nameInput.value.trim() || "Spieler";
@@ -305,6 +402,7 @@ shareBtn.addEventListener("click", async () => {
   catch (e) { console.error(e); setStatus("Bildschirmfreigabe abgebrochen oder blockiert."); }
 });
 stopBtn.addEventListener("click", stopSharing);
+qualitySelect.addEventListener("change", applyQualityToAllSenders);
 
 document.body.addEventListener("click", () => {
   for (const id of activeStreams.keys()) resumeVideo(id);
@@ -317,7 +415,6 @@ socket.on("joined", data => {
   joined = true;
   myId = data.myId;
   roomId = data.roomId;
-
   players.clear();
   for (const p of data.players) players.set(p.id, p);
 
@@ -339,6 +436,7 @@ socket.on("players", list => {
 });
 
 socket.on("peer-stopped-sharing", ({ peerId }) => clearStreamFromTile(peerId));
+socket.on("peer-quality-changed", ({ peerId, quality }) => setDebug(peerId, { quality }));
 
 socket.on("webrtc-description", async ({ from, description }) => {
   const item = ensurePeer(from);
@@ -371,11 +469,8 @@ socket.on("webrtc-description", async ({ from, description }) => {
 
 socket.on("webrtc-ice", async ({ from, candidate }) => {
   const item = ensurePeer(from);
-  try {
-    await item.pc.addIceCandidate(candidate);
-  } catch (err) {
-    if (!item.ignoreOffer) console.warn("ICE failed", err);
-  }
+  try { await item.pc.addIceCandidate(candidate); }
+  catch (err) { if (!item.ignoreOffer) console.warn("ICE failed", err); }
 });
 
 socket.on("peer-left", ({ peerId }) => {
@@ -387,11 +482,58 @@ socket.on("peer-left", ({ peerId }) => {
   rebuildTiles();
 });
 
-setInterval(() => {
+async function collectStats() {
+  for (const [peerId, item] of peers) {
+    try {
+      const stats = await item.pc.getStats();
+      const prev = lastStats.get(peerId) || {};
+      const patch = {};
+
+      stats.forEach(report => {
+        if (report.type === "candidate-pair" && report.state === "succeeded" && report.nominated) {
+          if (typeof report.currentRoundTripTime === "number") patch.rtt = `${Math.round(report.currentRoundTripTime * 1000)} ms`;
+        }
+
+        if (report.type === "inbound-rtp" && report.kind === "video") {
+          const key = `in-${report.id}`;
+          const old = prev[key];
+          if (old && report.timestamp > old.timestamp) {
+            const bits = (report.bytesReceived - old.bytesReceived) * 8;
+            const seconds = (report.timestamp - old.timestamp) / 1000;
+            patch.bitrate = formatMbps(bits / seconds / 1000000);
+          }
+          prev[key] = { timestamp: report.timestamp, bytesReceived: report.bytesReceived };
+          patch.packetsLost = report.packetsLost ?? patch.packetsLost;
+          patch.framesDropped = report.framesDropped ?? patch.framesDropped;
+          if (typeof report.jitter === "number") patch.jitter = `${Math.round(report.jitter * 1000)} ms`;
+        }
+
+        if (report.type === "outbound-rtp" && report.kind === "video") {
+          const key = `out-${report.id}`;
+          const old = prev[key];
+          if (old && report.timestamp > old.timestamp) {
+            const bits = (report.bytesSent - old.bytesSent) * 8;
+            const seconds = (report.timestamp - old.timestamp) / 1000;
+            patch.bitrate = formatMbps(bits / seconds / 1000000);
+          }
+          prev[key] = { timestamp: report.timestamp, bytesSent: report.bytesSent };
+        }
+      });
+
+      lastStats.set(peerId, prev);
+      setDebug(peerId, patch);
+    } catch (err) {
+      console.warn("getStats failed", err);
+    }
+  }
+
   for (const id of tiles.keys()) renderDebug(id);
-}, 1000);
+}
+
+setInterval(collectStats, 1000);
 
 const roomFromUrl = getRoomFromUrl();
 if (roomFromUrl) roomInput.value = roomFromUrl;
 nameInput.value = localStorage.getItem("soullockeName") || "";
+qualitySelect.value = localStorage.getItem("soullockeQuality") || "medium";
 rebuildTiles();
