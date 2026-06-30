@@ -1,37 +1,20 @@
-# Soullocke WebRTC Stable
+# Soullocke WebRTC Stable v2
 
-Stabilere 4-Spieler-Version für private Spielübertragung.
+Fix für schwarze Remote-Videos:
 
-## Lokal testen
+- Video-Elemente sind jetzt muted/autoplay/playsinline.
+- Nach attachStreamToTile wird explizit video.play() ausgeführt.
+- Empfangene Streams werden separat in activeStreams gespeichert.
+- Cache-Buster `?v=2` für CSS/JS.
+
+## Deploy
+
+Dateien ersetzen, dann:
 
 ```bash
-npm install
-npm start
+git add .
+git commit -m "fix remote video playback"
+git push
 ```
 
-Dann:
-
-```text
-http://localhost:3000/room/Raum1
-```
-
-## Render
-
-Build Command:
-
-```text
-npm install
-```
-
-Start Command:
-
-```text
-npm start
-```
-
-Nach dem Push zu GitHub macht Render automatisch ein neues Deploy.
-
-## Wichtig
-
-Ohne TURN-Server funktioniert WebRTC bei den meisten Heimnetzwerken, aber nicht bei allen.
-Falls ein Freund trotz HTTPS keine Streams sieht, brauchen wir später noch TURN.
+Danach Render neu deployen lassen und im Browser mit Strg+F5 hart neu laden.

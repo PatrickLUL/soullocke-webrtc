@@ -10,11 +10,10 @@ const io = new Server(server, { cors: { origin: "*" }, pingTimeout: 30000, pingI
 
 const PORT = process.env.PORT || 3000;
 const MAX_PLAYERS = 4;
+const rooms = new Map();
 
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/room/:roomId", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-
-const rooms = new Map();
 
 function getRoom(roomId) {
   if (!rooms.has(roomId)) rooms.set(roomId, new Map());
@@ -72,17 +71,9 @@ io.on("connection", socket => {
     io.to(fromPeerId).emit("stream-requested", { requesterId: socket.id });
   });
 
-  socket.on("webrtc-offer", ({ to, description }) => {
-    io.to(to).emit("webrtc-offer", { from: socket.id, description });
-  });
-
-  socket.on("webrtc-answer", ({ to, description }) => {
-    io.to(to).emit("webrtc-answer", { from: socket.id, description });
-  });
-
-  socket.on("webrtc-ice", ({ to, candidate }) => {
-    io.to(to).emit("webrtc-ice", { from: socket.id, candidate });
-  });
+  socket.on("webrtc-offer", ({ to, description }) => io.to(to).emit("webrtc-offer", { from: socket.id, description }));
+  socket.on("webrtc-answer", ({ to, description }) => io.to(to).emit("webrtc-answer", { from: socket.id, description }));
+  socket.on("webrtc-ice", ({ to, candidate }) => io.to(to).emit("webrtc-ice", { from: socket.id, candidate }));
 
   socket.on("disconnect", () => {
     const roomId = socket.data.roomId;

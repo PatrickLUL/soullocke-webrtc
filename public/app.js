@@ -21,6 +21,7 @@ const tiles = new Map();
 const outgoingPeers = new Map();
 const incomingPeers = new Map();
 const pendingIce = new Map();
+const activeStreams = new Map();
 
 const iceConfig = {
   iceServers: [
@@ -45,13 +46,20 @@ function createTile(id, labelText, connected = false) {
   const name = clone.querySelector(".name");
   const video = clone.querySelector("video");
   const fullscreenBtn = clone.querySelector(".fullscreenBtn");
+
+  video.autoplay = true;
+  video.muted = true;
+  video.playsInline = true;
+
   tile.dataset.id = id;
   name.textContent = labelText;
   if (connected) tile.classList.add("connected");
+
   fullscreenBtn.addEventListener("click", () => toggleFocus(tile));
   video.addEventListener("dblclick", () => toggleFocus(tile));
+
   grid.appendChild(tile);
-  tiles.set(id, { tile, name, video });
+  tiles.set(id, { tile, name, video, debug: clone.querySelector?.(".debug") });
   return tiles.get(id);
 }
 
@@ -63,11 +71,6 @@ function toggleFocus(tile) {
 }
 
 function rebuildTiles() {
-  const streams = new Map();
-  for (const [id, data] of tiles) {
-    if (data.video.srcObject) streams.set(id, data.video.srcObject);
-  }
-
   tiles.clear();
   grid.innerHTML = "";
 
@@ -79,21 +82,37 @@ function rebuildTiles() {
 
   while (grid.children.length < 4) createTile(`empty-${grid.children.length}`, "Leer", false);
 
-  for (const [id, stream] of streams) attachStreamToTile(id, stream);
+  for (const [id, stream] of activeStreams) attachStreamToTile(id, stream);
   if (localStream) attachStreamToTile(myId, localStream);
 }
 
 function attachStreamToTile(playerId, stream) {
+  activeStreams.set(playerId, stream);
+
   let data = tiles.get(playerId);
   if (!data) {
     const p = players.get(playerId);
     data = createTile(playerId, p?.name || "Mitspieler", true);
   }
+
   data.video.srcObject = stream;
+  data.video.muted = true;
+  data.video.autoplay = true;
+  data.video.playsInline = true;
+
+  const playPromise = data.video.play();
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(err => {
+      console.warn("video.play blocked", err);
+      setStatus("Video empfangen, aber Browser blockiert autoplay. Klicke einmal auf die Seite.");
+    });
+  }
+
   data.tile.classList.add("has-video", "connected");
 }
 
 function clearStreamFromTile(playerId) {
+  activeStreams.delete(playerId);
   const data = tiles.get(playerId);
   if (!data) return;
   data.video.srcObject = null;
@@ -131,6 +150,7 @@ function createOutgoingPeer(viewerId) {
   };
 
   pc.onconnectionstatechange = () => {
+    console.log("outgoing", viewerId, pc.connectionState);
     if (["failed", "closed"].includes(pc.connectionState)) closePeer(outgoingPeers, viewerId);
   };
 
@@ -143,8 +163,9 @@ function createIncomingPeer(streamerId) {
   incomingPeers.set(streamerId, pc);
 
   pc.ontrack = e => {
-    const stream = e.streams[0];
-    if (stream) attachStreamToTile(streamerId, stream);
+    console.log("received track from", streamerId, e.track.kind, e.track.readyState);
+    const stream = e.streams[0] || new MediaStream([e.track]);
+    attachStreamToTile(streamerId, stream);
   };
 
   pc.onicecandidate = e => {
@@ -152,6 +173,7 @@ function createIncomingPeer(streamerId) {
   };
 
   pc.onconnectionstatechange = () => {
+    console.log("incoming", streamerId, pc.connectionState);
     if (pc.connectionState === "connected") {
       const p = players.get(streamerId);
       setStatus(`Verbunden mit ${p?.name || "Mitspieler"}.`);
@@ -203,6 +225,7 @@ function stopSharing() {
   if (!localStream) return;
   for (const track of localStream.getTracks()) track.stop();
   localStream = null;
+  activeStreams.delete(myId);
   for (const id of outgoingPeers.keys()) closePeer(outgoingPeers, id);
   clearStreamFromTile(myId);
   shareBtn.disabled = !joined;
@@ -221,6 +244,12 @@ joinBtn.addEventListener("click", () => {
   }
 
   socket.emit("join-room", { roomId, name: myName });
+});
+
+document.body.addEventListener("click", () => {
+  for (const data of tiles.values()) {
+    if (data.video.srcObject) data.video.play().catch(() => {});
+  }
 });
 
 shareBtn.addEventListener("click", async () => {
@@ -293,6 +322,7 @@ socket.on("peer-left", ({ peerId }) => {
   closePeer(incomingPeers, peerId);
   closePeer(outgoingPeers, peerId);
   players.delete(peerId);
+  clearStreamFromTile(peerId);
   rebuildTiles();
 });
 
