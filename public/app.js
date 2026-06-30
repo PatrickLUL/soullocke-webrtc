@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.2-sprites";
+const APP_VERSION = "v8.3-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -28,6 +28,155 @@ const debugState = new Map();
 const frameCounters = new Map();
 const lastStats = new Map();
 const teams = new Map();
+
+const POKEMON_MAP = {
+  "bisasam": 1, "bulbasaur": 1,
+  "bisaknosp": 2, "ivysaur": 2,
+  "bisaflor": 3, "venusaur": 3,
+  "glumanda": 4, "charmander": 4,
+  "glutexo": 5, "charmeleon": 5,
+  "glurak": 6, "charizard": 6,
+  "schiggy": 7, "squirtle": 7,
+  "schillok": 8, "wartortle": 8,
+  "turtok": 9, "blastoise": 9,
+  "raupy": 10, "caterpie": 10,
+  "safcon": 11, "metapod": 11,
+  "smettbo": 12, "butterfree": 12,
+  "hornliu": 13, "weedle": 13,
+  "kokuna": 14, "kakuna": 14,
+  "bibor": 15, "beedrill": 15,
+  "taubsi": 16, "pidgey": 16,
+  "tauboga": 17, "pidgeotto": 17,
+  "tauboss": 18, "pidgeot": 18,
+  "rattfratz": 19, "rattata": 19,
+  "rattikarl": 20, "raticate": 20,
+  "habitak": 21, "spearow": 21,
+  "ibitak": 22, "fearow": 22,
+  "rettan": 23, "ekans": 23,
+  "arbok": 24,
+  "pikachu": 25,
+  "raichu": 26,
+  "sandan": 27, "sandshrew": 27,
+  "sandamer": 28, "sandslash": 28,
+  "piepi": 35, "clefairy": 35,
+  "pixi": 36, "clefable": 36,
+  "vulpix": 37,
+  "vulnona": 38, "ninetales": 38,
+  "pummeluff": 39, "jigglypuff": 39,
+  "knuddeluff": 40, "wigglytuff": 40,
+  "zubat": 41,
+  "golbat": 42,
+  "myrapla": 43, "oddish": 43,
+  "duflor": 44, "gloom": 44,
+  "giflor": 45, "vileplume": 45,
+  "paras": 46,
+  "parasek": 47, "parasect": 47,
+  "bluzuk": 48, "venonat": 48,
+  "omot": 49, "venomoth": 49,
+  "digda": 50, "diglett": 50,
+  "digdri": 51, "dugtrio": 51,
+  "mauzi": 52, "meowth": 52,
+  "snobilikat": 53, "persian": 53,
+  "enton": 54, "psyduck": 54,
+  "entoron": 55, "golduck": 55,
+  "menki": 56, "mankey": 56,
+  "rasaff": 57, "primeape": 57,
+  "fukano": 58, "growlithe": 58,
+  "arkani": 59, "arcanine": 59,
+  "quapsel": 60, "poliwag": 60,
+  "quaputzi": 61, "poliwhirl": 61,
+  "quappo": 62, "poliwrath": 62,
+  "abra": 63,
+  "kadabra": 64,
+  "simsala": 65, "alakazam": 65,
+  "machollo": 66, "machop": 66,
+  "maschock": 67, "machoke": 67,
+  "machomei": 68, "machamp": 68,
+  "knofensa": 69, "bellsprout": 69,
+  "ultrigaria": 70, "weepinbell": 70,
+  "sarzenia": 71, "victreebel": 71,
+  "tentacha": 72, "tentacool": 72,
+  "tentoxa": 73, "tentacruel": 73,
+  "kleinstein": 74, "geodude": 74,
+  "georok": 75, "graveler": 75,
+  "geowaz": 76, "golem": 76,
+  "ponita": 77, "ponyta": 77,
+  "gallopa": 78, "rapidash": 78,
+  "flegmon": 79, "slowpoke": 79,
+  "lahmus": 80, "slowbro": 80,
+  "magnetilo": 81, "magnemite": 81,
+  "magneton": 82,
+  "porenta": 83, "farfetchd": 83,
+  "dodu": 84, "doduo": 84,
+  "dodri": 85, "dodrio": 85,
+  "jurob": 86, "seel": 86,
+  "jugong": 87, "dewgong": 87,
+  "sleima": 88, "grimer": 88,
+  "sleimok": 89, "muk": 89,
+  "muschas": 90, "shellder": 90,
+  "austos": 91, "cloyster": 91,
+  "nebulak": 92, "gastly": 92,
+  "alpollo": 93, "haunter": 93,
+  "gengar": 94,
+  "onix": 95,
+  "traumato": 96, "drowzee": 96,
+  "hypno": 97,
+  "krabby": 98,
+  "kingler": 99,
+  "voltobal": 100, "voltorb": 100,
+  "lektrobal": 101, "electrode": 101,
+  "owei": 102, "exeggcute": 102,
+  "kokowei": 103, "exeggutor": 103,
+  "tragosso": 104, "cubone": 104,
+  "knogga": 105, "marowak": 105,
+  "kicklee": 106, "hitmonlee": 106,
+  "nockchan": 107, "hitmonchan": 107,
+  "schlurp": 108, "lickitung": 108,
+  "smogon": 109, "koffing": 109,
+  "smogmog": 110, "weezing": 110,
+  "rihorn": 111, "rhyhorn": 111,
+  "rizeros": 112, "rhydon": 112,
+  "chaneira": 113, "chansey": 113,
+  "tangela": 114,
+  "kangama": 115, "kangaskhan": 115,
+  "seeper": 116, "horsea": 116,
+  "seemon": 117, "seadra": 117,
+  "goldini": 118, "goldeen": 118,
+  "golking": 119, "seaking": 119,
+  "sterndu": 120, "staryu": 120,
+  "starmie": 121,
+  "pantimos": 122, "mr-mime": 122,
+  "sichlor": 123, "scyther": 123,
+  "rossana": 124, "jynx": 124,
+  "elektek": 125, "electabuzz": 125,
+  "magmar": 126,
+  "pinsir": 127,
+  "tauros": 128,
+  "karpador": 129, "magikarp": 129,
+  "garados": 130, "gyarados": 130,
+  "lapras": 131,
+  "ditto": 132,
+  "evoli": 133, "eevee": 133,
+  "aquana": 134, "vaporeon": 134,
+  "blitza": 135, "jolteon": 135,
+  "flamara": 136, "flareon": 136,
+  "relaxo": 143, "snorlax": 143,
+  "dratini": 147,
+  "dragonir": 148, "dragonair": 148,
+  "dragoran": 149, "dragonite": 149,
+  "mewtu": 150, "mewtwo": 150,
+  "mew": 151
+};
+
+function setupPokemonSuggestions() {
+  if (!pokemonSuggestions) return;
+  pokemonSuggestions.innerHTML = Object.keys(POKEMON_MAP)
+    .sort((a, b) => a.localeCompare(b))
+    .map(name => `<option value="${name}"></option>`)
+    .join("");
+}
+
+
 
 const qualityProfiles = {
   low: {
@@ -135,171 +284,6 @@ function toggleFocus(tile) {
 }
 
 
-
-const POKEMON_DB = [
-  { id: 1, names: ["bulbasaur", "bisasam"] },
-  { id: 2, names: ["ivysaur", "bisaknosp"] },
-  { id: 3, names: ["venusaur", "bisaflor"] },
-  { id: 4, names: ["charmander", "glumanda"] },
-  { id: 5, names: ["charmeleon", "glutexo"] },
-  { id: 6, names: ["charizard", "glurak"] },
-  { id: 7, names: ["squirtle", "schiggy"] },
-  { id: 8, names: ["wartortle", "schillok"] },
-  { id: 9, names: ["blastoise", "turtok"] },
-  { id: 10, names: ["caterpie", "raupy"] },
-  { id: 11, names: ["metapod", "safcon"] },
-  { id: 12, names: ["butterfree", "smettbo"] },
-  { id: 13, names: ["weedle", "hornliu"] },
-  { id: 14, names: ["kakuna", "kokuna"] },
-  { id: 15, names: ["beedrill", "bibor"] },
-  { id: 16, names: ["pidgey", "taubsi"] },
-  { id: 17, names: ["pidgeotto", "tauboga"] },
-  { id: 18, names: ["pidgeot", "tauboss"] },
-  { id: 19, names: ["rattata", "rattfratz"] },
-  { id: 20, names: ["raticate", "rattikarl"] },
-  { id: 21, names: ["spearow", "habitak"] },
-  { id: 22, names: ["fearow", "ibitak"] },
-  { id: 23, names: ["ekans", "rettan"] },
-  { id: 24, names: ["arbok", "arbok"] },
-  { id: 25, names: ["pikachu", "pikachu"] },
-  { id: 26, names: ["raichu", "raichu"] },
-  { id: 27, names: ["sandshrew", "sandan"] },
-  { id: 28, names: ["sandslash", "sandamer"] },
-  { id: 29, names: ["nidoran-f", "nidoran♀", "nidoran weiblich"] },
-  { id: 30, names: ["nidorina", "nidorina"] },
-  { id: 31, names: ["nidoqueen", "nidoqueen"] },
-  { id: 32, names: ["nidoran-m", "nidoran♂", "nidoran männlich"] },
-  { id: 33, names: ["nidorino", "nidorino"] },
-  { id: 34, names: ["nidoking", "nidoking"] },
-  { id: 35, names: ["clefairy", "piepi"] },
-  { id: 36, names: ["clefable", "pixi"] },
-  { id: 37, names: ["vulpix", "vulpix"] },
-  { id: 38, names: ["ninetales", "vulnona"] },
-  { id: 39, names: ["jigglypuff", "pummeluff"] },
-  { id: 40, names: ["wigglytuff", "knuddeluff"] },
-  { id: 41, names: ["zubat", "zubat"] },
-  { id: 42, names: ["golbat", "golbat"] },
-  { id: 43, names: ["oddish", "myrapla"] },
-  { id: 44, names: ["gloom", "duflor"] },
-  { id: 45, names: ["vileplume", "giflor"] },
-  { id: 46, names: ["paras", "paras"] },
-  { id: 47, names: ["parasect", "parasek"] },
-  { id: 48, names: ["venonat", "bluzuk"] },
-  { id: 49, names: ["venomoth", "omot"] },
-  { id: 50, names: ["diglett", "digda"] },
-  { id: 51, names: ["dugtrio", "digdri"] },
-  { id: 52, names: ["meowth", "mauzi"] },
-  { id: 53, names: ["persian", "snobilikat"] },
-  { id: 54, names: ["psyduck", "enton"] },
-  { id: 55, names: ["golduck", "entoron"] },
-  { id: 56, names: ["mankey", "menki"] },
-  { id: 57, names: ["primeape", "rasaff"] },
-  { id: 58, names: ["growlithe", "fukano"] },
-  { id: 59, names: ["arcanine", "arkani"] },
-  { id: 60, names: ["poliwag", "quapsel"] },
-  { id: 61, names: ["poliwhirl", "quaputzi"] },
-  { id: 62, names: ["poliwrath", "quappo"] },
-  { id: 63, names: ["abra", "abra"] },
-  { id: 64, names: ["kadabra", "kadabra"] },
-  { id: 65, names: ["alakazam", "simsala"] },
-  { id: 66, names: ["machop", "machollo"] },
-  { id: 67, names: ["machoke", "maschock"] },
-  { id: 68, names: ["machamp", "machomei"] },
-  { id: 69, names: ["bellsprout", "knofensa"] },
-  { id: 70, names: ["weepinbell", "ultrigaria"] },
-  { id: 71, names: ["victreebel", "sarzenia"] },
-  { id: 72, names: ["tentacool", "tentacha"] },
-  { id: 73, names: ["tentacruel", "tentoxa"] },
-  { id: 74, names: ["geodude", "kleinstein"] },
-  { id: 75, names: ["graveler", "georok"] },
-  { id: 76, names: ["golem", "geowaz"] },
-  { id: 77, names: ["ponyta", "ponita"] },
-  { id: 78, names: ["rapidash", "gallopa"] },
-  { id: 79, names: ["slowpoke", "flegmon"] },
-  { id: 80, names: ["slowbro", "lahmus"] },
-  { id: 81, names: ["magnemite", "magnetilo"] },
-  { id: 82, names: ["magneton", "magneton"] },
-  { id: 83, names: ["farfetchd", "porenta"] },
-  { id: 84, names: ["doduo", "dodu"] },
-  { id: 85, names: ["dodrio", "dodri"] },
-  { id: 86, names: ["seel", "jurob"] },
-  { id: 87, names: ["dewgong", "jugong"] },
-  { id: 88, names: ["grimer", "sleima"] },
-  { id: 89, names: ["muk", "sleimok"] },
-  { id: 90, names: ["shellder", "muschas"] },
-  { id: 91, names: ["cloyster", "austos"] },
-  { id: 92, names: ["gastly", "nebulak"] },
-  { id: 93, names: ["haunter", "alpollo"] },
-  { id: 94, names: ["gengar", "gengar"] },
-  { id: 95, names: ["onix", "onix"] },
-  { id: 96, names: ["drowzee", "traumato"] },
-  { id: 97, names: ["hypno", "hypno"] },
-  { id: 98, names: ["krabby", "krabby"] },
-  { id: 99, names: ["kingler", "kingler"] },
-  { id: 100, names: ["voltorb", "voltobal"] },
-  { id: 101, names: ["electrode", "lektrobal"] },
-  { id: 102, names: ["exeggcute", "owei"] },
-  { id: 103, names: ["exeggutor", "kokowei"] },
-  { id: 104, names: ["cubone", "tragosso"] },
-  { id: 105, names: ["marowak", "knogga"] },
-  { id: 106, names: ["hitmonlee", "kicklee"] },
-  { id: 107, names: ["hitmonchan", "nockchan"] },
-  { id: 108, names: ["lickitung", "schlurp"] },
-  { id: 109, names: ["koffing", "smogon"] },
-  { id: 110, names: ["weezing", "smogmog"] },
-  { id: 111, names: ["rhyhorn", "rihorn"] },
-  { id: 112, names: ["rhydon", "rizeros"] },
-  { id: 113, names: ["chansey", "chaneira"] },
-  { id: 114, names: ["tangela", "tangela"] },
-  { id: 115, names: ["kangaskhan", "kangama"] },
-  { id: 116, names: ["horsea", "seeper"] },
-  { id: 117, names: ["seadra", "seemon"] },
-  { id: 118, names: ["goldeen", "goldini"] },
-  { id: 119, names: ["seaking", "golking"] },
-  { id: 120, names: ["staryu", "sterndu"] },
-  { id: 121, names: ["starmie", "starmie"] },
-  { id: 122, names: ["mr-mime", "pantimos"] },
-  { id: 123, names: ["scyther", "sichlor"] },
-  { id: 124, names: ["jynx", "rossana"] },
-  { id: 125, names: ["electabuzz", "elektek"] },
-  { id: 126, names: ["magmar", "magmar"] },
-  { id: 127, names: ["pinsir", "pinsir"] },
-  { id: 128, names: ["tauros", "tauros"] },
-  { id: 129, names: ["magikarp", "karpador"] },
-  { id: 130, names: ["gyarados", "garados"] },
-  { id: 131, names: ["lapras", "lapras"] },
-  { id: 132, names: ["ditto", "ditto"] },
-  { id: 133, names: ["eevee", "evoli"] },
-  { id: 134, names: ["vaporeon", "aquana"] },
-  { id: 135, names: ["jolteon", "blitza"] },
-  { id: 136, names: ["flareon", "flamara"] },
-  { id: 143, names: ["snorlax", "relaxo"] },
-  { id: 147, names: ["dratini", "dratini"] },
-  { id: 148, names: ["dragonair", "dragonir"] },
-  { id: 149, names: ["dragonite", "dragoran"] },
-  { id: 150, names: ["mewtwo", "mewtu"] },
-  { id: 151, names: ["mew", "mew"] }
-];
-
-const POKEMON_BY_NAME = new Map();
-for (const entry of POKEMON_DB) {
-  for (const name of entry.names) POKEMON_BY_NAME.set(normalizePokemonName(name), entry);
-}
-
-function setupPokemonSuggestions() {
-  if (!pokemonSuggestions) return;
-  const names = [];
-  for (const entry of POKEMON_DB) {
-    names.push(entry.names[1] || entry.names[0]);
-    if (entry.names[0] !== entry.names[1]) names.push(entry.names[0]);
-  }
-  pokemonSuggestions.innerHTML = [...new Set(names)]
-    .sort((a, b) => a.localeCompare(b))
-    .map(name => `<option value="${name}"></option>`)
-    .join("");
-}
-
-
 function emptyTeam() {
   return Array.from({ length: 6 }, () => ({ pokemon: "", status: "alive" }));
 }
@@ -318,16 +302,10 @@ function normalizePokemonName(value) {
     .replaceAll("♂", "-m");
 }
 
-function getPokemonEntry(name) {
-  const normalized = normalizePokemonName(name);
-  return POKEMON_BY_NAME.get(normalized) || null;
-}
-
 function spriteUrl(name) {
-  const entry = getPokemonEntry(name);
-  if (entry) return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${entry.id}.png`;
-
   const normalized = normalizePokemonName(name);
+  const id = POKEMON_MAP[normalized];
+  if (id) return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
   if (!normalized) return "";
   return `https://img.pokemondb.net/sprites/home/normal/${normalized}.png`;
 }
