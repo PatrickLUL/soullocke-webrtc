@@ -1,14 +1,17 @@
-# Soullocke WebRTC v8.1-sprites
+# Soullocke WebRTC v8.2-sprites
 
-Fix:
-- Sprite-Team-Button/Slots sind jetzt sicher klickbar.
-- Editor liegt mit hohem z-index über dem Stream.
-- Zusätzliche Event-Delegation, falls direkte Button-Events vom Stream/Overlay geschluckt werden.
-- Sichtbare Version: v8.1-sprites.
+Fix/Neu:
+- Sprite lädt jetzt auch mit deutschen Namen wie `glumanda`, `bisasam`, `schiggy`, `evoli`.
+- Autocomplete/Datalist im Pokémon-Editor.
+- Sprite-Quelle nutzt für bekannte Pokémon die stabilen PokeAPI-ID-Sprites.
+- Sichtbare Version: v8.2-sprites.
+
+Hinweis:
+Aktuell ist Gen 1 vollständig als Deutsch/Englisch-Mapping drin. Weitere Generationen können wir als nächstes ergänzen.
 
 Deploy:
 ```bash
 git add .
-git commit -m "fix sprite overlay editor click"
+git commit -m "add pokemon autocomplete and sprite mapping"
 git push
 ```
