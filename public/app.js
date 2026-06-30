@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v7.1-teams";
+const APP_VERSION = "v8-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -11,7 +11,7 @@ const stopBtn = document.querySelector("#stopBtn");
 const statusEl = document.querySelector("#status");
 const grid = document.querySelector("#grid");
 const tileTemplate = document.querySelector("#tileTemplate");
-const pokemonSlotTemplate = document.querySelector("#pokemonSlotTemplate");
+const teamEditorTemplate = document.querySelector("#teamEditorTemplate");
 
 let myId = "";
 let roomId = "";
@@ -27,7 +27,6 @@ const debugState = new Map();
 const frameCounters = new Map();
 const lastStats = new Map();
 const teams = new Map();
-let openEditorFor = "";
 
 const qualityProfiles = {
   low: {
@@ -120,14 +119,9 @@ function createTile(id, labelText, connected = false) {
   video.addEventListener("dblclick", () => toggleFocus(tile));
   playOverlay.addEventListener("click", () => resumeVideo(id));
 
-  const teamPanel = document.createElement("aside");
-  teamPanel.className = "teamPanel";
-  tile.appendChild(teamPanel);
-  tile.classList.add("has-team");
-
   grid.appendChild(tile);
-  tiles.set(id, { tile, name, video, playOverlay, debugBox, teamPanel });
-  renderTeam(id);
+  tiles.set(id, { tile, name, video, playOverlay, debugBox });
+  renderSpriteBar(id);
   renderDebug(id);
   return tiles.get(id);
 }
@@ -141,133 +135,163 @@ function toggleFocus(tile) {
 
 
 function emptyTeam() {
-  return Array.from({ length: 6 }, () => ({ name: "", level: "", status: "alive" }));
+  return Array.from({ length: 6 }, () => ({ pokemon: "", status: "alive" }));
 }
 
 function getTeam(playerId) {
   return teams.get(playerId) || emptyTeam();
 }
 
-function getPlayerName(playerId) {
-  const p = players.get(playerId);
-  return playerId === myId ? `${myName || p?.name || "Ich"} (ich)` : (p?.name || "Leer");
+function normalizePokemonName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll(" ", "-")
+    .replaceAll(".", "")
+    .replaceAll("♀", "-f")
+    .replaceAll("♂", "-m");
 }
 
-function renderTeam(playerId) {
+function spriteUrl(name) {
+  const normalized = normalizePokemonName(name);
+  if (!normalized) return "";
+  return `https://img.pokemondb.net/sprites/home/normal/${normalized}.png`;
+}
+
+function tinySpriteUrl(name) {
+  const normalized = normalizePokemonName(name);
+  if (!normalized) return "";
+  return `https://img.pokemondb.net/sprites/sword-shield/icon/${normalized}.png`;
+}
+
+function renderSpriteBar(playerId) {
   const data = tiles.get(playerId);
-  if (!data || !data.teamPanel) return;
+  if (!data) return;
 
-  const team = getTeam(playerId);
-  const filled = team.filter(p => p.name).length;
-  const canEdit = playerId === myId && joined;
-
-  data.teamPanel.innerHTML = `
-    <div class="teamTitle">
-      <span>🎮 Team ${getPlayerName(playerId)}</span>
-      ${canEdit ? '<button class="editTeamBtn">Bearbeiten</button>' : `<span>${filled}/6</span>`}
-    </div>
-    <div class="pokemonList"></div>
-  `;
-
-  const list = data.teamPanel.querySelector(".pokemonList");
-  team.forEach((pokemon) => {
-    const row = document.createElement("div");
-    row.className = `pokemonDisplaySlot ${pokemon.status || "alive"}`;
-    const icon = pokemon.status === "dead" ? "☠️" : pokemon.status === "box" ? "📦" : "⚪";
-    row.innerHTML = `
-      <span class="pokeIcon">${pokemon.name ? icon : "—"}</span>
-      <span>${pokemon.name || "Leer"}</span>
-      <span class="pokeMeta">${pokemon.level ? "Lv. " + pokemon.level : ""}</span>
-    `;
-    list.appendChild(row);
-  });
-
-  const btn = data.teamPanel.querySelector(".editTeamBtn");
-  if (btn) btn.addEventListener("click", () => openTeamEditor(myId));
-}
-
-function renderAllTeams() {
-  for (const id of tiles.keys()) renderTeam(id);
-}
-
-
-function openTeamEditor(playerId) {
-  if (playerId !== myId) return;
-
-  let editor = document.querySelector(".pokemonEditor");
-  if (!editor) {
-    editor = document.createElement("div");
-    editor.className = "pokemonEditor";
-    document.body.appendChild(editor);
+  let bar = data.tile.querySelector(".spriteTeamBar");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.className = "spriteTeamBar";
+    data.tile.appendChild(bar);
   }
 
   const team = getTeam(playerId);
-  const rows = team.map((pokemon, index) => `
-    <div class="pokemonSlot" data-index="${index}">
-      <input class="pokeName" placeholder="Pokémon" maxlength="24" value="${escapeHtml(pokemon.name || "")}" />
-      <input class="pokeLevel" placeholder="Lv." maxlength="4" value="${escapeHtml(pokemon.level || "")}" />
-      <select class="pokeStatus">
-        <option value="alive" ${pokemon.status === "alive" ? "selected" : ""}>Lebendig</option>
-        <option value="dead" ${pokemon.status === "dead" ? "selected" : ""}>Tot</option>
-        <option value="box" ${pokemon.status === "box" ? "selected" : ""}>Box</option>
-      </select>
-      <button class="clearPokemon" type="button" title="Slot leeren">×</button>
-    </div>
-  `).join("");
+  const editable = playerId === myId && joined;
 
-  editor.innerHTML = `
-    <div class="editorHeader">
-      <span>Team bearbeiten</span>
-      <button id="closeTeamEditor" type="button">×</button>
-    </div>
-    <div class="editorHint">Pokémon eintragen, Status setzen und speichern.</div>
-    <div id="pokemonSlots">${rows}</div>
-    <div class="editorActions">
-      <button id="clearTeamBtn" type="button">Team leeren</button>
-      <button id="saveTeamBtn" type="button">Speichern</button>
-    </div>
-  `;
+  bar.innerHTML = "";
 
-  editor.classList.remove("hidden");
+  team.forEach((pokemon, index) => {
+    const slot = document.createElement("div");
+    slot.className = `spriteSlot ${pokemon.pokemon ? "" : "empty"} ${pokemon.status || "alive"} ${editable ? "editable" : ""}`;
+    slot.title = pokemon.pokemon ? `${pokemon.pokemon} (${pokemon.status || "alive"})` : "Leerer Slot";
 
-  editor.querySelector("#closeTeamEditor").onclick = () => editor.classList.add("hidden");
+    if (pokemon.pokemon) {
+      const img = document.createElement("img");
+      img.src = tinySpriteUrl(pokemon.pokemon);
+      img.alt = pokemon.pokemon;
+      img.onerror = () => {
+        img.src = spriteUrl(pokemon.pokemon);
+      };
+      slot.appendChild(img);
+    }
 
-  editor.querySelectorAll(".clearPokemon").forEach(btn => {
-    btn.onclick = () => {
-      const slot = btn.closest(".pokemonSlot");
-      slot.querySelector(".pokeName").value = "";
-      slot.querySelector(".pokeLevel").value = "";
-      slot.querySelector(".pokeStatus").value = "alive";
-    };
+    if (editable) slot.addEventListener("click", () => openSpriteEditor());
+    bar.appendChild(slot);
   });
 
-  editor.querySelector("#clearTeamBtn").onclick = () => {
+  if (editable) {
+    const edit = document.createElement("button");
+    edit.className = "spriteEditButton";
+    edit.type = "button";
+    edit.textContent = "✎";
+    edit.title = "Team bearbeiten";
+    edit.addEventListener("click", openSpriteEditor);
+    bar.appendChild(edit);
+  }
+}
+
+function renderAllSpriteBars() {
+  for (const id of tiles.keys()) renderSpriteBar(id);
+}
+
+function openSpriteEditor() {
+  let existing = document.querySelector(".spriteEditor");
+  if (existing) existing.remove();
+
+  const node = teamEditorTemplate.content.cloneNode(true);
+  const editor = node.querySelector(".spriteEditor");
+  const slots = editor.querySelector(".spriteEditorSlots");
+  const team = getTeam(myId);
+
+  team.forEach((pokemon, index) => {
+    const row = document.createElement("div");
+    row.className = "spriteEditorRow";
+    row.dataset.index = String(index);
+
+    const preview = document.createElement("img");
+    preview.alt = "";
+    preview.src = pokemon.pokemon ? tinySpriteUrl(pokemon.pokemon) : "";
+    preview.style.visibility = pokemon.pokemon ? "visible" : "hidden";
+
+    const input = document.createElement("input");
+    input.className = "pokemonNameInput";
+    input.placeholder = "z.B. pikachu";
+    input.value = pokemon.pokemon || "";
+
+    const status = document.createElement("select");
+    status.className = "pokemonStatusInput";
+    status.innerHTML = `
+      <option value="alive">Lebendig</option>
+      <option value="dead">Tot</option>
+      <option value="box">Box</option>
+    `;
+    status.value = pokemon.status || "alive";
+
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.textContent = "×";
+    clear.title = "Slot leeren";
+
+    input.addEventListener("input", () => {
+      const value = normalizePokemonName(input.value);
+      if (value) {
+        preview.src = tinySpriteUrl(value);
+        preview.style.visibility = "visible";
+      } else {
+        preview.style.visibility = "hidden";
+      }
+    });
+
+    clear.addEventListener("click", () => {
+      input.value = "";
+      status.value = "alive";
+      preview.style.visibility = "hidden";
+    });
+
+    row.append(preview, input, status, clear);
+    slots.appendChild(row);
+  });
+
+  editor.querySelector(".closeSpriteEditor").addEventListener("click", () => editor.remove());
+  editor.querySelector(".clearSpriteTeam").addEventListener("click", () => {
     const next = emptyTeam();
     teams.set(myId, next);
     socket.emit("update-team", { team: next });
-    editor.classList.add("hidden");
-    renderAllTeams();
-  };
-
-  editor.querySelector("#saveTeamBtn").onclick = () => {
-    const next = [...editor.querySelectorAll(".pokemonSlot")].map(slot => ({
-      name: slot.querySelector(".pokeName").value.trim(),
-      level: slot.querySelector(".pokeLevel").value.trim(),
-      status: slot.querySelector(".pokeStatus").value
+    renderAllSpriteBars();
+    editor.remove();
+  });
+  editor.querySelector(".saveSpriteTeam").addEventListener("click", () => {
+    const next = [...editor.querySelectorAll(".spriteEditorRow")].map(row => ({
+      pokemon: normalizePokemonName(row.querySelector(".pokemonNameInput").value),
+      status: row.querySelector(".pokemonStatusInput").value
     }));
     teams.set(myId, next);
     socket.emit("update-team", { team: next });
-    editor.classList.add("hidden");
-    renderAllTeams();
-  };
-}
+    renderAllSpriteBars();
+    editor.remove();
+  });
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+  document.body.appendChild(editor);
 }
 
 
@@ -575,14 +599,14 @@ socket.on("players", list => {
   players.clear();
   for (const p of list) players.set(p.id, p);
   rebuildTiles();
-  renderAllTeams();
+  renderAllSpriteBars();
   ensureAllPeers();
 });
 
 socket.on("teams", data => {
   teams.clear();
   if (data) for (const [id, team] of Object.entries(data)) teams.set(id, team);
-  renderAllTeams();
+  renderAllSpriteBars();
 });
 
 socket.on("peer-stopped-sharing", ({ peerId }) => clearStreamFromTile(peerId));

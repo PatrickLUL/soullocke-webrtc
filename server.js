@@ -15,18 +15,25 @@ const rooms = new Map();
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/room/:roomId", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-function getRoomState(roomId) {
-  if (!rooms.has(roomId)) rooms.set(roomId, { players: new Map(), teams: {} });
+function defaultTeam() {
+  return Array.from({ length: 6 }, () => ({
+    pokemon: "",
+    status: "alive"
+  }));
+}
+
+function getRoom(roomId) {
+  if (!rooms.has(roomId)) {
+    rooms.set(roomId, {
+      players: new Map(),
+      teams: {}
+    });
+  }
   return rooms.get(roomId);
 }
 
-function makeDefaultTeam() {
-  return Array.from({ length: 6 }, () => ({ name: "", level: "", status: "alive" }));
-}
-
 function playerList(roomId) {
-  const room = getRoomState(roomId);
-  return [...room.players.values()]
+  return [...getRoom(roomId).players.values()]
     .sort((a, b) => a.joinedAt - b.joinedAt)
     .map(p => ({ id: p.id, name: p.name, joinedAt: p.joinedAt, isSharing: p.isSharing }));
 }
@@ -36,7 +43,7 @@ function broadcastPlayers(roomId) {
 }
 
 function broadcastTeams(roomId) {
-  io.to(roomId).emit("teams", getRoomState(roomId).teams);
+  io.to(roomId).emit("teams", getRoom(roomId).teams);
 }
 
 io.on("connection", socket => {
@@ -45,7 +52,7 @@ io.on("connection", socket => {
     name = String(name || "Spieler").trim().slice(0, 24);
     if (!roomId) return socket.emit("join-error", "Kein Raumcode angegeben.");
 
-    const room = getRoomState(roomId);
+    const room = getRoom(roomId);
     if (!room.players.has(socket.id) && room.players.size >= MAX_PLAYERS) {
       return socket.emit("join-error", "Der Raum ist voll. Maximal 4 Spieler.");
     }
@@ -53,32 +60,17 @@ io.on("connection", socket => {
     socket.join(roomId);
     socket.data.roomId = roomId;
     room.players.set(socket.id, { id: socket.id, name, joinedAt: Date.now(), isSharing: false });
-    if (!room.teams[socket.id]) room.teams[socket.id] = makeDefaultTeam();
+    if (!room.teams[socket.id]) room.teams[socket.id] = defaultTeam();
 
     socket.emit("joined", { myId: socket.id, roomId, players: playerList(roomId), teams: room.teams });
     broadcastPlayers(roomId);
     broadcastTeams(roomId);
   });
 
-  socket.on("update-team", ({ team }) => {
-    const roomId = socket.data.roomId;
-    if (!roomId) return;
-    const room = getRoomState(roomId);
-    room.teams[socket.id] = Array.from({ length: 6 }, (_, i) => {
-      const item = Array.isArray(team) ? (team[i] || {}) : {};
-      return {
-        name: String(item.name || "").trim().slice(0, 24),
-        level: String(item.level || "").trim().slice(0, 4),
-        status: ["alive", "dead", "box"].includes(item.status) ? item.status : "alive"
-      };
-    });
-    broadcastTeams(roomId);
-  });
-
   socket.on("start-sharing", () => {
     const roomId = socket.data.roomId;
     if (!roomId) return;
-    const p = getRoomState(roomId).players.get(socket.id);
+    const p = getRoom(roomId).players.get(socket.id);
     if (p) p.isSharing = true;
     broadcastPlayers(roomId);
   });
@@ -86,10 +78,27 @@ io.on("connection", socket => {
   socket.on("stop-sharing", () => {
     const roomId = socket.data.roomId;
     if (!roomId) return;
-    const p = getRoomState(roomId).players.get(socket.id);
+    const p = getRoom(roomId).players.get(socket.id);
     if (p) p.isSharing = false;
     broadcastPlayers(roomId);
     socket.to(roomId).emit("peer-stopped-sharing", { peerId: socket.id });
+  });
+
+  socket.on("update-team", ({ team }) => {
+    const roomId = socket.data.roomId;
+    if (!roomId) return;
+
+    const room = getRoom(roomId);
+    const safeTeam = Array.from({ length: 6 }, (_, i) => {
+      const item = Array.isArray(team) ? (team[i] || {}) : {};
+      return {
+        pokemon: String(item.pokemon || "").trim().toLowerCase().slice(0, 32),
+        status: ["alive", "dead", "box"].includes(item.status) ? item.status : "alive"
+      };
+    });
+
+    room.teams[socket.id] = safeTeam;
+    broadcastTeams(roomId);
   });
 
   socket.on("quality-changed", ({ quality }) => {
@@ -103,7 +112,7 @@ io.on("connection", socket => {
   socket.on("disconnect", () => {
     const roomId = socket.data.roomId;
     if (!roomId) return;
-    const room = getRoomState(roomId);
+    const room = getRoom(roomId);
     room.players.delete(socket.id);
     socket.to(roomId).emit("peer-left", { peerId: socket.id });
     if (room.players.size === 0) rooms.delete(roomId);
