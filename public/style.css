@@ -62,3 +62,19 @@ body.focus .topbar, body.focus .status { display: none; }
   .controls { justify-content: flex-start; margin-top: 10px; }
   .grid { height: auto; grid-template-columns: 1fr; grid-template-rows: repeat(4, 38vh); }
 }
+
+.editorHint {
+  font-size: 12px;
+  opacity: .75;
+  margin-bottom: 10px;
+}
+#pokemonSlots {
+  display: grid;
+  gap: 6px;
+  max-height: 330px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.pokemonEditor {
+  pointer-events: auto;
+}

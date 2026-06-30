@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v7-teams";
+const APP_VERSION = "v7.1-teams";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -190,9 +190,9 @@ function renderAllTeams() {
   for (const id of tiles.keys()) renderTeam(id);
 }
 
+
 function openTeamEditor(playerId) {
   if (playerId !== myId) return;
-  openEditorFor = playerId;
 
   let editor = document.querySelector(".pokemonEditor");
   if (!editor) {
@@ -202,42 +202,54 @@ function openTeamEditor(playerId) {
   }
 
   const team = getTeam(playerId);
+  const rows = team.map((pokemon, index) => `
+    <div class="pokemonSlot" data-index="${index}">
+      <input class="pokeName" placeholder="Pokémon" maxlength="24" value="${escapeHtml(pokemon.name || "")}" />
+      <input class="pokeLevel" placeholder="Lv." maxlength="4" value="${escapeHtml(pokemon.level || "")}" />
+      <select class="pokeStatus">
+        <option value="alive" ${pokemon.status === "alive" ? "selected" : ""}>Lebendig</option>
+        <option value="dead" ${pokemon.status === "dead" ? "selected" : ""}>Tot</option>
+        <option value="box" ${pokemon.status === "box" ? "selected" : ""}>Box</option>
+      </select>
+      <button class="clearPokemon" type="button" title="Slot leeren">×</button>
+    </div>
+  `).join("");
+
   editor.innerHTML = `
     <div class="editorHeader">
       <span>Team bearbeiten</span>
-      <button id="closeTeamEditor">×</button>
+      <button id="closeTeamEditor" type="button">×</button>
     </div>
-    <div id="pokemonSlots"></div>
+    <div class="editorHint">Pokémon eintragen, Status setzen und speichern.</div>
+    <div id="pokemonSlots">${rows}</div>
     <div class="editorActions">
-      <button id="clearTeamBtn">Team leeren</button>
-      <button id="saveTeamBtn">Speichern</button>
+      <button id="clearTeamBtn" type="button">Team leeren</button>
+      <button id="saveTeamBtn" type="button">Speichern</button>
     </div>
   `;
 
-  const slots = editor.querySelector("#pokemonSlots");
-  team.forEach((pokemon, index) => {
-    const node = pokemonSlotTemplate.content.cloneNode(true);
-    const slot = node.querySelector(".pokemonSlot");
-    slot.dataset.index = String(index);
-    slot.querySelector(".pokeName").value = pokemon.name || "";
-    slot.querySelector(".pokeLevel").value = pokemon.level || "";
-    slot.querySelector(".pokeStatus").value = pokemon.status || "alive";
-    slot.querySelector(".clearPokemon").addEventListener("click", () => {
+  editor.classList.remove("hidden");
+
+  editor.querySelector("#closeTeamEditor").onclick = () => editor.classList.add("hidden");
+
+  editor.querySelectorAll(".clearPokemon").forEach(btn => {
+    btn.onclick = () => {
+      const slot = btn.closest(".pokemonSlot");
       slot.querySelector(".pokeName").value = "";
       slot.querySelector(".pokeLevel").value = "";
       slot.querySelector(".pokeStatus").value = "alive";
-    });
-    slots.appendChild(slot);
+    };
   });
 
-  editor.querySelector("#closeTeamEditor").addEventListener("click", () => editor.classList.add("hidden"));
-  editor.querySelector("#clearTeamBtn").addEventListener("click", () => {
-    teams.set(myId, emptyTeam());
-    socket.emit("update-team", { team: getTeam(myId) });
+  editor.querySelector("#clearTeamBtn").onclick = () => {
+    const next = emptyTeam();
+    teams.set(myId, next);
+    socket.emit("update-team", { team: next });
     editor.classList.add("hidden");
     renderAllTeams();
-  });
-  editor.querySelector("#saveTeamBtn").addEventListener("click", () => {
+  };
+
+  editor.querySelector("#saveTeamBtn").onclick = () => {
     const next = [...editor.querySelectorAll(".pokemonSlot")].map(slot => ({
       name: slot.querySelector(".pokeName").value.trim(),
       level: slot.querySelector(".pokeLevel").value.trim(),
@@ -247,9 +259,15 @@ function openTeamEditor(playerId) {
     socket.emit("update-team", { team: next });
     editor.classList.add("hidden");
     renderAllTeams();
-  });
+  };
+}
 
-  editor.classList.remove("hidden");
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 

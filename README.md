@@ -1,24 +1,13 @@
-# Soullocke WebRTC v7-teams
+# Soullocke WebRTC v7.1-teams
 
-Neu:
-- Sichtbare Version: v7-teams
-- Team-Overlay pro Spieler direkt in jeder Kachel
-- Eigenes Team über „Bearbeiten“ pflegen
-- 6 Slots pro Spieler
-- Status pro Pokémon:
-  - Lebendig
-  - Tot
-  - Box
-- Teams werden über Socket.io im Raum synchronisiert
-- WebRTC-Streaming basiert auf v6.1/v5-perfect
+Fix:
+- Team-Bearbeiten-Popup zeigt jetzt die 6 Slots zuverlässig an.
+- Buttons im Editor funktionieren: Speichern, Team leeren, Slot leeren.
+- Sichtbare Version oben: v7.1-teams.
 
 Deploy:
 ```bash
 git add .
-git commit -m "add pokemon team overlay"
+git commit -m "fix pokemon team editor"
 git push
 ```
-
-Hinweis:
-Das Team ist vorerst raum-live im Server-Speicher. Wenn Render schläft oder der Raum leer wird, ist es weg.
-Später können wir Speicherung per LocalStorage, Datenbank oder Raum-Export ergänzen.
