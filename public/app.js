@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.4-sprites";
+const APP_VERSION = "v8.5-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -350,13 +350,13 @@ function openSpriteEditor() {
     slots.appendChild(row);
   });
 
-  editor.querySelector(".closeSpriteEditor").addEventListener("click", () => editor.remove());
+  editor.querySelector(".closeSpriteEditor").addEventListener("click", () => closeSpriteEditor(editor));
   editor.querySelector(".clearSpriteTeam").addEventListener("click", () => {
     const next = emptyTeam();
     teams.set(myId, next);
     socket.emit("update-team", { team: next });
     renderAllSpriteBars();
-    editor.remove();
+    closeSpriteEditor(editor);
   });
   editor.querySelector(".saveSpriteTeam").addEventListener("click", () => {
     const next = [...editor.querySelectorAll(".spriteEditorRow")].map(row => ({
@@ -366,10 +366,16 @@ function openSpriteEditor() {
     teams.set(myId, next);
     socket.emit("update-team", { team: next });
     renderAllSpriteBars();
-    editor.remove();
+    closeSpriteEditor(editor);
   });
 
   document.body.appendChild(editor);
+  document.body.classList.add("editor-open");
+}
+
+function closeSpriteEditor(editor) {
+  editor.remove();
+  document.body.classList.remove("editor-open");
 }
 
 
