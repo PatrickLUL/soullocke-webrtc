@@ -4,31 +4,43 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Soullocke Private Game View</title>
-  <link rel="stylesheet" href="/style.css?v=8.9" />
+  <link rel="stylesheet" href="/style.css?v=8.10" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <h1>Soullocke Private Game View <span id="versionBadge">v8.9-sprites</span></h1>
+      <h1>Soullocke Private Game View <span id="versionBadge">v8.10-sprites</span></h1>
       <p>Private Spielansicht für bis zu 4 Spieler</p>
     </div>
     <div class="controls">
       <input id="roomInput" placeholder="Raumcode" autocomplete="off" />
       <input id="nameInput" placeholder="Dein Name" autocomplete="off" />
-      <select id="qualitySelect" title="Qualität für deinen Upload">
-        <option value="low">480p / 20 FPS</option>
-        <option value="medium" selected>720p / 30 FPS</option>
-        <option value="high">1080p / 60 FPS</option>
-      </select>
-      <select id="gameSelect" title="Spiel auswählen (bestimmt Level-Caps & Karte)">
-        <option value="hgss">HeartGold / SoulSilver</option>
-      </select>
       <button id="joinBtn">Raum beitreten</button>
       <button id="shareBtn" disabled>Spiel freigeben</button>
       <button id="stopBtn" disabled>Stoppen</button>
       <button id="mapBtn" type="button" title="Interaktive Karte öffnen">Karte</button>
-      <button id="debugToggleBtn" type="button" title="Debug-Infos pro Kachel ein-/ausblenden">Debug: Aus</button>
-      <button id="exportBtn" type="button" disabled title="Team-Status aller Spieler als JSON herunterladen">Team-Export (JSON)</button>
+      <div class="settingsWrap">
+        <button id="settingsBtn" type="button" title="Einstellungen">⚙</button>
+        <div id="settingsPanel" class="settingsPanel hidden">
+          <label class="settingsRow">
+            <span>Qualität</span>
+            <select id="qualitySelect" title="Qualität für deinen Upload">
+              <option value="low">480p / 20 FPS</option>
+              <option value="medium" selected>720p / 30 FPS</option>
+              <option value="high">1080p / 60 FPS</option>
+            </select>
+          </label>
+          <label class="settingsRow">
+            <span>Spiel</span>
+            <select id="gameSelect" title="Spiel auswählen (bestimmt Level-Caps & Karte)">
+              <option value="hgss">HeartGold / SoulSilver</option>
+            </select>
+          </label>
+          <button id="debugToggleBtn" type="button" title="Debug-Infos pro Kachel ein-/ausblenden">Debug: Aus</button>
+          <button id="clearTeamBtn" type="button" title="Eigenes Team komplett leeren">Team leeren</button>
+          <button id="exportBtn" type="button" disabled title="Team-Status aller Spieler als JSON herunterladen">Team-Export (JSON)</button>
+        </div>
+      </div>
     </div>
   </header>
   <div id="status" class="status">Noch nicht verbunden.</div>
@@ -60,6 +72,6 @@
   <datalist id="pokemonSuggestions"></datalist>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=8.9"></script>
+  <script src="/app.js?v=8.10"></script>
 </body>
 </html>

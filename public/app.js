@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.9-sprites";
+const APP_VERSION = "v8.10-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -17,10 +17,12 @@ const mapModal = document.querySelector("#mapModal");
 const mapSvgContainer = document.querySelector("#mapSvgContainer");
 const mapInfoPanel = document.querySelector("#mapInfoPanel");
 const mapGameLabel = document.querySelector("#mapGameLabel");
+const settingsBtn = document.querySelector("#settingsBtn");
+const settingsPanel = document.querySelector("#settingsPanel");
+const clearTeamBtn = document.querySelector("#clearTeamBtn");
 const statusEl = document.querySelector("#status");
 const grid = document.querySelector("#grid");
 const tileTemplate = document.querySelector("#tileTemplate");
-const teamEditorTemplate = document.querySelector("#teamEditorTemplate");
 const pokemonSuggestions = document.querySelector("#pokemonSuggestions");
 
 let myId = "";
@@ -318,19 +320,15 @@ function renderSpriteBar(playerId) {
       slot.appendChild(img);
     }
 
-    if (editable) slot.addEventListener("click", () => openSpriteEditor());
+    if (editable) {
+      slot.dataset.index = String(index);
+      slot.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openSlotPopover(slot, index);
+      });
+    }
     bar.appendChild(slot);
   });
-
-  if (editable) {
-    const edit = document.createElement("button");
-    edit.className = "spriteEditButton";
-    edit.type = "button";
-    edit.textContent = "✎";
-    edit.title = "Team bearbeiten";
-    edit.addEventListener("click", openSpriteEditor);
-    bar.appendChild(edit);
-  }
 
   const badgeCount = getBadges(playerId);
   const cap = levelCapForBadges(currentGame, badgeCount);
@@ -375,110 +373,85 @@ function renderAllSpriteBars() {
   for (const id of tiles.keys()) renderSpriteBar(id);
 }
 
-function openSpriteEditor() {
-  console.log("openSpriteEditor clicked", { myId, joined });
-  let existing = document.querySelector(".spriteEditor");
+function closeSlotPopover() {
+  const existing = document.querySelector(".slotPopover");
   if (existing) existing.remove();
+}
 
-  let editor;
-  if (teamEditorTemplate && teamEditorTemplate.content) {
-    const node = teamEditorTemplate.content.cloneNode(true);
-    editor = node.querySelector(".spriteEditor");
-  } else {
-    editor = document.createElement("div");
-    editor.className = "spriteEditor";
-    editor.innerHTML = `
-      <div class="spriteEditorHeader">
-        <strong>Team bearbeiten</strong>
-        <button class="closeSpriteEditor" type="button">×</button>
-      </div>
-      <div class="spriteEditorSlots"></div>
-      <div class="spriteEditorActions">
-        <button class="clearSpriteTeam" type="button">Team leeren</button>
-        <button class="saveSpriteTeam" type="button">Speichern</button>
-      </div>
-    `;
-  }
+function positionPopover(pop, anchorEl) {
+  const rect = anchorEl.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  let top = rect.bottom + 8;
+  let left = rect.left;
 
-  const slots = editor.querySelector(".spriteEditorSlots");
+  if (left + popRect.width > window.innerWidth - 10) left = window.innerWidth - popRect.width - 10;
+  if (left < 10) left = 10;
+  if (top + popRect.height > window.innerHeight - 10) top = rect.top - popRect.height - 8;
+  if (top < 10) top = 10;
+
+  pop.style.top = `${top}px`;
+  pop.style.left = `${left}px`;
+}
+
+function openSlotPopover(anchorEl, index) {
+  const alreadyOpenForThisSlot = document.querySelector(".slotPopover")?.dataset.index === String(index);
+  closeSlotPopover();
+  if (alreadyOpenForThisSlot) return;
+
   const team = getTeam(myId);
+  const current = team[index] || { pokemon: "", status: "alive" };
 
-  team.forEach((pokemon, index) => {
-    const row = document.createElement("div");
-    row.className = "spriteEditorRow";
-    row.dataset.index = String(index);
-
-    const preview = document.createElement("img");
-    preview.alt = "";
-    preview.src = pokemon.pokemon ? tinySpriteUrl(pokemon.pokemon) : "";
-    preview.style.visibility = pokemon.pokemon ? "visible" : "hidden";
-
-    const input = document.createElement("input");
-    input.className = "pokemonNameInput";
-    input.placeholder = "z.B. glumanda";
-    input.setAttribute("list", "pokemonSuggestions");
-    input.value = pokemon.pokemon || "";
-
-    const status = document.createElement("select");
-    status.className = "pokemonStatusInput";
-    status.innerHTML = `
+  const pop = document.createElement("div");
+  pop.className = "slotPopover";
+  pop.dataset.index = String(index);
+  pop.innerHTML = `
+    <input class="slotPopoverInput" type="text" placeholder="z.B. glumanda" list="pokemonSuggestions" autocomplete="off" />
+    <select class="slotPopoverStatus">
       <option value="alive">Lebendig</option>
       <option value="dead">Tot</option>
       <option value="box">Box</option>
-    `;
-    status.value = pokemon.status || "alive";
+    </select>
+    <div class="slotPopoverActions">
+      <button type="button" class="slotPopoverClear">Leeren</button>
+      <button type="button" class="slotPopoverSave">✓ Speichern</button>
+    </div>
+  `;
 
-    const clear = document.createElement("button");
-    clear.type = "button";
-    clear.textContent = "×";
-    clear.title = "Slot leeren";
+  const input = pop.querySelector(".slotPopoverInput");
+  const status = pop.querySelector(".slotPopoverStatus");
+  input.value = current.pokemon || "";
+  status.value = current.status || "alive";
 
-    input.addEventListener("input", () => {
-      const value = normalizePokemonName(input.value);
-      if (value) {
-        preview.src = tinySpriteUrl(value);
-        preview.style.visibility = "visible";
-      } else {
-        preview.style.visibility = "hidden";
-      }
-    });
-
-    clear.addEventListener("click", () => {
-      input.value = "";
-      status.value = "alive";
-      preview.style.visibility = "hidden";
-    });
-
-    row.append(preview, input, status, clear);
-    slots.appendChild(row);
-  });
-
-  editor.querySelector(".closeSpriteEditor").addEventListener("click", () => closeSpriteEditor(editor));
-  editor.querySelector(".clearSpriteTeam").addEventListener("click", () => {
-    const next = emptyTeam();
+  function save() {
+    const next = getTeam(myId).slice();
+    next[index] = { pokemon: normalizePokemonName(input.value), status: status.value };
     teams.set(myId, next);
     socket.emit("update-team", { team: next });
     renderAllSpriteBars();
-    closeSpriteEditor(editor);
-  });
-  editor.querySelector(".saveSpriteTeam").addEventListener("click", () => {
-    const next = [...editor.querySelectorAll(".spriteEditorRow")].map(row => ({
-      pokemon: normalizePokemonName(row.querySelector(".pokemonNameInput").value),
-      status: row.querySelector(".pokemonStatusInput").value
-    }));
+    closeSlotPopover();
+  }
+
+  function clearSlot() {
+    const next = getTeam(myId).slice();
+    next[index] = { pokemon: "", status: "alive" };
     teams.set(myId, next);
     socket.emit("update-team", { team: next });
     renderAllSpriteBars();
-    closeSpriteEditor(editor);
+    closeSlotPopover();
+  }
+
+  pop.querySelector(".slotPopoverSave").addEventListener("click", (e) => { e.stopPropagation(); save(); });
+  pop.querySelector(".slotPopoverClear").addEventListener("click", (e) => { e.stopPropagation(); clearSlot(); });
+  pop.addEventListener("click", (e) => e.stopPropagation());
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); save(); }
+    if (e.key === "Escape") closeSlotPopover();
   });
 
-  document.body.appendChild(editor);
-  document.body.classList.add("editor-open");
-}
-
-function closeSpriteEditor(editor) {
-  editor.remove();
-  document.body.classList.remove("editor-open");
+  document.body.appendChild(pop);
+  positionPopover(pop, anchorEl);
+  input.focus();
+  input.select();
 }
 
 
@@ -845,6 +818,21 @@ function updateDebugToggleLabel() {
 document.body.classList.toggle("hide-debug", !debugVisible);
 updateDebugToggleLabel();
 
+settingsBtn.addEventListener("click", (event) => {
+  event.stopPropagation();
+  closeSlotPopover();
+  settingsPanel.classList.toggle("hidden");
+});
+
+clearTeamBtn.addEventListener("click", () => {
+  if (!joined) return;
+  const next = emptyTeam();
+  teams.set(myId, next);
+  socket.emit("update-team", { team: next });
+  renderAllSpriteBars();
+  settingsPanel.classList.add("hidden");
+});
+
 debugToggleBtn.addEventListener("click", () => {
   debugVisible = !debugVisible;
   localStorage.setItem("soullockeDebugVisible", String(debugVisible));
@@ -900,17 +888,20 @@ document.body.addEventListener("click", (event) => {
   for (const id of activeStreams.keys()) resumeVideo(id);
 
   const target = event.target;
-  if (target.closest && target.closest(".spriteEditButton")) {
-    event.preventDefault();
-    event.stopPropagation();
-    openSpriteEditor();
-  }
+  if (target.closest && (target.closest(".slotPopover") || target.closest(".spriteSlot.editable"))) return;
+  closeSlotPopover();
 
-  const slot = target.closest && target.closest(".spriteSlot.editable");
-  if (slot) {
-    event.preventDefault();
-    event.stopPropagation();
-    openSpriteEditor();
+  if (settingsPanel && !settingsPanel.classList.contains("hidden")) {
+    if (!(target.closest && (target.closest("#settingsPanel") || target.closest("#settingsBtn")))) {
+      settingsPanel.classList.add("hidden");
+    }
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeSlotPopover();
+    if (settingsPanel) settingsPanel.classList.add("hidden");
   }
 });
 
