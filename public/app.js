@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v6.1-performance";
+const APP_VERSION = "v7-teams";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -11,6 +11,7 @@ const stopBtn = document.querySelector("#stopBtn");
 const statusEl = document.querySelector("#status");
 const grid = document.querySelector("#grid");
 const tileTemplate = document.querySelector("#tileTemplate");
+const pokemonSlotTemplate = document.querySelector("#pokemonSlotTemplate");
 
 let myId = "";
 let roomId = "";
@@ -25,6 +26,8 @@ const activeStreams = new Map();
 const debugState = new Map();
 const frameCounters = new Map();
 const lastStats = new Map();
+const teams = new Map();
+let openEditorFor = "";
 
 const qualityProfiles = {
   low: {
@@ -117,8 +120,14 @@ function createTile(id, labelText, connected = false) {
   video.addEventListener("dblclick", () => toggleFocus(tile));
   playOverlay.addEventListener("click", () => resumeVideo(id));
 
+  const teamPanel = document.createElement("aside");
+  teamPanel.className = "teamPanel";
+  tile.appendChild(teamPanel);
+  tile.classList.add("has-team");
+
   grid.appendChild(tile);
-  tiles.set(id, { tile, name, video, playOverlay, debugBox });
+  tiles.set(id, { tile, name, video, playOverlay, debugBox, teamPanel });
+  renderTeam(id);
   renderDebug(id);
   return tiles.get(id);
 }
@@ -129,6 +138,120 @@ function toggleFocus(tile) {
   for (const t of document.querySelectorAll(".tile")) t.classList.remove("focused");
   if (!isFocused) tile.classList.add("focused");
 }
+
+
+function emptyTeam() {
+  return Array.from({ length: 6 }, () => ({ name: "", level: "", status: "alive" }));
+}
+
+function getTeam(playerId) {
+  return teams.get(playerId) || emptyTeam();
+}
+
+function getPlayerName(playerId) {
+  const p = players.get(playerId);
+  return playerId === myId ? `${myName || p?.name || "Ich"} (ich)` : (p?.name || "Leer");
+}
+
+function renderTeam(playerId) {
+  const data = tiles.get(playerId);
+  if (!data || !data.teamPanel) return;
+
+  const team = getTeam(playerId);
+  const filled = team.filter(p => p.name).length;
+  const canEdit = playerId === myId && joined;
+
+  data.teamPanel.innerHTML = `
+    <div class="teamTitle">
+      <span>🎮 Team ${getPlayerName(playerId)}</span>
+      ${canEdit ? '<button class="editTeamBtn">Bearbeiten</button>' : `<span>${filled}/6</span>`}
+    </div>
+    <div class="pokemonList"></div>
+  `;
+
+  const list = data.teamPanel.querySelector(".pokemonList");
+  team.forEach((pokemon) => {
+    const row = document.createElement("div");
+    row.className = `pokemonDisplaySlot ${pokemon.status || "alive"}`;
+    const icon = pokemon.status === "dead" ? "☠️" : pokemon.status === "box" ? "📦" : "⚪";
+    row.innerHTML = `
+      <span class="pokeIcon">${pokemon.name ? icon : "—"}</span>
+      <span>${pokemon.name || "Leer"}</span>
+      <span class="pokeMeta">${pokemon.level ? "Lv. " + pokemon.level : ""}</span>
+    `;
+    list.appendChild(row);
+  });
+
+  const btn = data.teamPanel.querySelector(".editTeamBtn");
+  if (btn) btn.addEventListener("click", () => openTeamEditor(myId));
+}
+
+function renderAllTeams() {
+  for (const id of tiles.keys()) renderTeam(id);
+}
+
+function openTeamEditor(playerId) {
+  if (playerId !== myId) return;
+  openEditorFor = playerId;
+
+  let editor = document.querySelector(".pokemonEditor");
+  if (!editor) {
+    editor = document.createElement("div");
+    editor.className = "pokemonEditor";
+    document.body.appendChild(editor);
+  }
+
+  const team = getTeam(playerId);
+  editor.innerHTML = `
+    <div class="editorHeader">
+      <span>Team bearbeiten</span>
+      <button id="closeTeamEditor">×</button>
+    </div>
+    <div id="pokemonSlots"></div>
+    <div class="editorActions">
+      <button id="clearTeamBtn">Team leeren</button>
+      <button id="saveTeamBtn">Speichern</button>
+    </div>
+  `;
+
+  const slots = editor.querySelector("#pokemonSlots");
+  team.forEach((pokemon, index) => {
+    const node = pokemonSlotTemplate.content.cloneNode(true);
+    const slot = node.querySelector(".pokemonSlot");
+    slot.dataset.index = String(index);
+    slot.querySelector(".pokeName").value = pokemon.name || "";
+    slot.querySelector(".pokeLevel").value = pokemon.level || "";
+    slot.querySelector(".pokeStatus").value = pokemon.status || "alive";
+    slot.querySelector(".clearPokemon").addEventListener("click", () => {
+      slot.querySelector(".pokeName").value = "";
+      slot.querySelector(".pokeLevel").value = "";
+      slot.querySelector(".pokeStatus").value = "alive";
+    });
+    slots.appendChild(slot);
+  });
+
+  editor.querySelector("#closeTeamEditor").addEventListener("click", () => editor.classList.add("hidden"));
+  editor.querySelector("#clearTeamBtn").addEventListener("click", () => {
+    teams.set(myId, emptyTeam());
+    socket.emit("update-team", { team: getTeam(myId) });
+    editor.classList.add("hidden");
+    renderAllTeams();
+  });
+  editor.querySelector("#saveTeamBtn").addEventListener("click", () => {
+    const next = [...editor.querySelectorAll(".pokemonSlot")].map(slot => ({
+      name: slot.querySelector(".pokeName").value.trim(),
+      level: slot.querySelector(".pokeLevel").value.trim(),
+      status: slot.querySelector(".pokeStatus").value
+    }));
+    teams.set(myId, next);
+    socket.emit("update-team", { team: next });
+    editor.classList.add("hidden");
+    renderAllTeams();
+  });
+
+  editor.classList.remove("hidden");
+}
+
 
 function rebuildTiles() {
   tiles.clear();
@@ -417,6 +540,8 @@ socket.on("joined", data => {
   roomId = data.roomId;
   players.clear();
   for (const p of data.players) players.set(p.id, p);
+  teams.clear();
+  if (data.teams) for (const [id, team] of Object.entries(data.teams)) teams.set(id, team);
 
   joinBtn.disabled = true;
   shareBtn.disabled = false;
@@ -432,7 +557,14 @@ socket.on("players", list => {
   players.clear();
   for (const p of list) players.set(p.id, p);
   rebuildTiles();
+  renderAllTeams();
   ensureAllPeers();
+});
+
+socket.on("teams", data => {
+  teams.clear();
+  if (data) for (const [id, team] of Object.entries(data)) teams.set(id, team);
+  renderAllTeams();
 });
 
 socket.on("peer-stopped-sharing", ({ peerId }) => clearStreamFromTile(peerId));
