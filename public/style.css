@@ -3,6 +3,7 @@
 body { margin: 0; min-height: 100vh; background: #080810; color: white; font-family: system-ui, Arial, sans-serif; }
 .topbar { min-height: 78px; display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 12px 18px; background: linear-gradient(90deg, #7140a8, #db4ed4); border-bottom: 3px solid rgba(255,255,255,.18); }
 .brand h1 { margin: 0; font-size: 22px; }
+#versionBadge { font-size: 13px; padding: 4px 8px; border-radius: 999px; background: rgba(0,0,0,.35); vertical-align: middle; }
 .brand p { margin: 4px 0 0; opacity: .9; }
 .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 input, button { border: 0; border-radius: 8px; padding: 10px 12px; font-size: 15px; }
@@ -22,6 +23,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .tile.has-video .empty { display: none; }
 .playOverlay { display: none; position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; color: #111; box-shadow: 0 6px 30px rgba(0,0,0,.45); }
 .tile.needs-play .playOverlay { display: block; }
+.debugBox { position: absolute; z-index: 5; left: 10px; right: 10px; bottom: 8px; max-height: 96px; overflow: auto; margin: 0; padding: 8px; border-radius: 8px; background: rgba(0,0,0,.72); color: #bfffd1; font-size: 11px; white-space: pre-wrap; }
 body.focus .tile { display: none; }
 body.focus .tile.focused { display: block; position: fixed; inset: 0; z-index: 20; border-radius: 0; border: 0; }
 body.focus .topbar, body.focus .status { display: none; }

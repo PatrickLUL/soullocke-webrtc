@@ -1,4 +1,5 @@
 
+const APP_VERSION = "v4-debug";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -22,6 +23,7 @@ const outgoingPeers = new Map();
 const incomingPeers = new Map();
 const pendingIce = new Map();
 const activeStreams = new Map();
+const debugState = new Map();
 
 const iceConfig = {
   iceServers: [
@@ -32,6 +34,31 @@ const iceConfig = {
 };
 
 function setStatus(text) { statusEl.textContent = text; }
+
+function setDebug(id, patch) {
+  const current = debugState.get(id) || {};
+  debugState.set(id, { ...current, ...patch });
+  renderDebug(id);
+}
+
+function renderDebug(id) {
+  const data = tiles.get(id);
+  if (!data) return;
+  const s = debugState.get(id) || {};
+  const v = data.video;
+  const lines = [
+    APP_VERSION,
+    `socket: ${socket.connected ? "connected" : "offline"}`,
+    `peer: ${s.peer || "-"}`,
+    `ice: ${s.ice || "-"}`,
+    `track: ${s.track || "-"}`,
+    `video: ${v.videoWidth || 0}x${v.videoHeight || 0}`,
+    `ready: ${v.readyState}`,
+    `paused: ${v.paused}`,
+    `muted: ${v.muted}`
+  ];
+  data.debugBox.textContent = lines.join("\n");
+}
 
 function getRoomFromUrl() {
   const parts = location.pathname.split("/").filter(Boolean);
@@ -47,6 +74,7 @@ function createTile(id, labelText, connected = false) {
   const video = clone.querySelector("video");
   const fullscreenBtn = clone.querySelector(".fullscreenBtn");
   const playOverlay = clone.querySelector(".playOverlay");
+  const debugBox = clone.querySelector(".debugBox");
 
   video.autoplay = true;
   video.muted = true;
@@ -62,7 +90,8 @@ function createTile(id, labelText, connected = false) {
   playOverlay.addEventListener("click", () => resumeVideo(id));
 
   grid.appendChild(tile);
-  tiles.set(id, { tile, name, video, playOverlay });
+  tiles.set(id, { tile, name, video, playOverlay, debugBox });
+  renderDebug(id);
   return tiles.get(id);
 }
 
@@ -103,17 +132,25 @@ async function resumeVideo(playerId) {
     setStatus("Video gestartet.");
   } catch (e) {
     console.warn("manual play failed", e);
-    setStatus("Video konnte noch nicht gestartet werden. Bitte einmal in die Kachel klicken.");
+    setStatus("Video konnte nicht starten. Debug unten prüfen.");
   }
+  renderDebug(playerId);
 }
 
 function attachStreamToTile(playerId, stream) {
   activeStreams.set(playerId, stream);
-
   let data = tiles.get(playerId);
   if (!data) {
     const p = players.get(playerId);
     data = createTile(playerId, p?.name || "Mitspieler", true);
+  }
+
+  const track = stream.getVideoTracks()[0];
+  if (track) {
+    setDebug(playerId, { track: `${track.readyState}${track.muted ? " muted" : ""}` });
+    track.onmute = () => setDebug(playerId, { track: `${track.readyState} muted` });
+    track.onunmute = () => setDebug(playerId, { track: `${track.readyState} unmuted` });
+    track.onended = () => setDebug(playerId, { track: "ended" });
   }
 
   data.video.srcObject = stream;
@@ -124,14 +161,18 @@ function attachStreamToTile(playerId, stream) {
 
   data.video.onloadedmetadata = () => resumeVideo(playerId);
   data.video.oncanplay = () => resumeVideo(playerId);
+  data.video.onresize = () => renderDebug(playerId);
+  data.video.ontimeupdate = () => renderDebug(playerId);
 
   const promise = data.video.play();
   if (promise && promise.catch) {
     promise.catch(() => {
       data.tile.classList.add("needs-play");
       setStatus("Video empfangen. Klicke im schwarzen Feld auf „Video anzeigen“.");
+      renderDebug(playerId);
     });
   }
+  renderDebug(playerId);
 }
 
 function clearStreamFromTile(playerId) {
@@ -140,6 +181,7 @@ function clearStreamFromTile(playerId) {
   if (!data) return;
   data.video.srcObject = null;
   data.tile.classList.remove("has-video", "needs-play");
+  renderDebug(playerId);
 }
 
 function closePeer(map, peerId) {
@@ -165,6 +207,7 @@ function createOutgoingPeer(viewerId) {
   closePeer(outgoingPeers, viewerId);
   const pc = new RTCPeerConnection(iceConfig);
   outgoingPeers.set(viewerId, pc);
+  setDebug(viewerId, { peer: "outgoing-created", ice: pc.iceConnectionState });
 
   for (const track of localStream.getTracks()) pc.addTrack(track, localStream);
 
@@ -173,9 +216,11 @@ function createOutgoingPeer(viewerId) {
   };
 
   pc.onconnectionstatechange = () => {
+    setDebug(viewerId, { peer: pc.connectionState });
     if (pc.connectionState === "failed" || pc.connectionState === "closed") closePeer(outgoingPeers, viewerId);
   };
 
+  pc.oniceconnectionstatechange = () => setDebug(viewerId, { ice: pc.iceConnectionState });
   return pc;
 }
 
@@ -183,6 +228,7 @@ function createIncomingPeer(streamerId) {
   closePeer(incomingPeers, streamerId);
   const pc = new RTCPeerConnection(iceConfig);
   incomingPeers.set(streamerId, pc);
+  setDebug(streamerId, { peer: "incoming-created", ice: pc.iceConnectionState });
 
   pc.ontrack = e => {
     const stream = e.streams[0] || new MediaStream([e.track]);
@@ -194,6 +240,7 @@ function createIncomingPeer(streamerId) {
   };
 
   pc.onconnectionstatechange = () => {
+    setDebug(streamerId, { peer: pc.connectionState });
     if (pc.connectionState === "connected") {
       const p = players.get(streamerId);
       setStatus(`Verbunden mit ${p?.name || "Mitspieler"}.`);
@@ -204,6 +251,7 @@ function createIncomingPeer(streamerId) {
     }
   };
 
+  pc.oniceconnectionstatechange = () => setDebug(streamerId, { ice: pc.iceConnectionState });
   return pc;
 }
 
@@ -257,7 +305,6 @@ function joinRoom() {
   roomId = roomInput.value.trim() || getRoomFromUrl() || randomRoomCode();
   myName = nameInput.value.trim() || "Spieler";
   localStorage.setItem("soullockeName", myName);
-
   history.replaceState(null, "", `/room/${encodeURIComponent(roomId)}`);
   socket.emit("join-room", { roomId, name: myName });
 }
@@ -273,6 +320,9 @@ document.body.addEventListener("click", () => {
   for (const id of activeStreams.keys()) resumeVideo(id);
 });
 
+socket.on("connect", () => setStatus(`${APP_VERSION}: Socket verbunden.`));
+socket.on("disconnect", () => setStatus(`${APP_VERSION}: Socket getrennt.`));
+
 socket.on("joined", data => {
   joined = true;
   myId = data.myId;
@@ -284,7 +334,7 @@ socket.on("joined", data => {
   shareBtn.disabled = false;
   rebuildTiles();
 
-  setStatus(`Verbunden. Link für Freunde: ${location.origin}/room/${encodeURIComponent(roomId)}`);
+  setStatus(`${APP_VERSION}: Verbunden. Link für Freunde: ${location.origin}/room/${encodeURIComponent(roomId)}`);
   requestExistingStreams();
 });
 
@@ -339,6 +389,10 @@ socket.on("peer-left", ({ peerId }) => {
   clearStreamFromTile(peerId);
   rebuildTiles();
 });
+
+setInterval(() => {
+  for (const id of tiles.keys()) renderDebug(id);
+}, 1000);
 
 const roomFromUrl = getRoomFromUrl();
 if (roomFromUrl) roomInput.value = roomFromUrl;

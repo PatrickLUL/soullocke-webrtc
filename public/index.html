@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Soullocke Private Game View</title>
-  <link rel="stylesheet" href="/style.css?v=3" />
+  <link rel="stylesheet" href="/style.css?v=4" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <h1>Soullocke Private Game View</h1>
+      <h1>Soullocke Private Game View <span id="versionBadge">v4-debug</span></h1>
       <p>Private Spielansicht für bis zu 4 Spieler</p>
     </div>
     <div class="controls">
@@ -28,10 +28,11 @@
       <button class="fullscreenBtn" title="Groß anzeigen">⛶</button>
       <video autoplay muted playsinline></video>
       <button class="playOverlay">Video anzeigen</button>
+      <pre class="debugBox">debug...</pre>
       <div class="empty">Warte auf Spieler...</div>
     </section>
   </template>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=3"></script>
+  <script src="/app.js?v=4"></script>
 </body>
 </html>
