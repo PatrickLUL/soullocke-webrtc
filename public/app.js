@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.10-sprites";
+const APP_VERSION = "v8.11-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -12,6 +12,7 @@ const debugToggleBtn = document.querySelector("#debugToggleBtn");
 const exportBtn = document.querySelector("#exportBtn");
 const gameSelect = document.querySelector("#gameSelect");
 const mapBtn = document.querySelector("#mapBtn");
+const spotlightBtn = document.querySelector("#spotlightBtn");
 const closeMapBtn = document.querySelector("#closeMapBtn");
 const mapModal = document.querySelector("#mapModal");
 const mapSvgContainer = document.querySelector("#mapSvgContainer");
@@ -216,6 +217,7 @@ function createTile(id, labelText, connected = false) {
   const tile = clone.querySelector(".tile");
   const name = clone.querySelector(".name");
   const video = clone.querySelector("video");
+  const videoWrap = clone.querySelector(".videoWrap");
   const fullscreenBtn = clone.querySelector(".fullscreenBtn");
   const playOverlay = clone.querySelector(".playOverlay");
   const debugBox = clone.querySelector(".debugBox");
@@ -232,11 +234,17 @@ function createTile(id, labelText, connected = false) {
   fullscreenBtn.addEventListener("click", () => toggleFocus(tile));
   video.addEventListener("dblclick", () => toggleFocus(tile));
   playOverlay.addEventListener("click", () => resumeVideo(id));
+  videoWrap.addEventListener("click", (event) => {
+    if (!document.body.classList.contains("spotlight")) return;
+    if (event.target.closest(".fullscreenBtn") || event.target.closest(".playOverlay")) return;
+    setSpotlightMain(id);
+  });
 
   grid.appendChild(tile);
   tiles.set(id, { tile, name, video, playOverlay, debugBox });
   renderSpriteBar(id);
   renderDebug(id);
+  applySpotlight();
   return tiles.get(id);
 }
 
@@ -245,6 +253,36 @@ function toggleFocus(tile) {
   document.body.classList.toggle("focus", !isFocused);
   for (const t of document.querySelectorAll(".tile")) t.classList.remove("focused");
   if (!isFocused) tile.classList.add("focused");
+}
+
+let spotlightMainId = null;
+
+function applySpotlight() {
+  if (!document.body.classList.contains("spotlight")) return;
+  if ((!spotlightMainId || !tiles.has(spotlightMainId)) && tiles.size) {
+    spotlightMainId = (myId && tiles.has(myId)) ? myId : [...tiles.keys()][0];
+  }
+  for (const [id, data] of tiles.entries()) {
+    data.tile.classList.toggle("spotlightMain", id === spotlightMainId);
+  }
+}
+
+function setSpotlightMain(id) {
+  if (!tiles.has(id)) return;
+  spotlightMainId = id;
+  applySpotlight();
+}
+
+function toggleSpotlight() {
+  const enabling = !document.body.classList.contains("spotlight");
+  document.body.classList.toggle("spotlight", enabling);
+  spotlightBtn.textContent = enabling ? "Spotlight: An" : "Spotlight";
+  if (enabling) {
+    if (!spotlightMainId || !tiles.has(spotlightMainId)) {
+      spotlightMainId = (myId && tiles.has(myId)) ? myId : [...tiles.keys()][0] || null;
+    }
+    applySpotlight();
+  }
 }
 
 
@@ -307,8 +345,8 @@ function renderSpriteBar(playerId) {
 
   team.forEach((pokemon, index) => {
     const slot = document.createElement("div");
-    slot.className = `spriteSlot ${pokemon.pokemon ? "" : "empty"} ${pokemon.status || "alive"} ${editable ? "editable" : ""}`;
-    slot.title = pokemon.pokemon ? `${pokemon.pokemon} (${pokemon.status || "alive"})` : "Leerer Slot";
+    slot.className = `spriteSlot ${pokemon.pokemon ? "" : "slotEmpty"} ${pokemon.status || "alive"} ${editable ? "editable" : ""}`;
+    slot.title = pokemon.pokemon ? `${pokemon.pokemon} (${pokemon.status || "alive"})` : (editable ? "Klicken, um ein Pokémon einzutragen" : "Leerer Slot");
 
     if (pokemon.pokemon) {
       const img = document.createElement("img");
@@ -517,6 +555,7 @@ function closeMap() {
 }
 
 mapBtn.addEventListener("click", openMap);
+spotlightBtn.addEventListener("click", toggleSpotlight);
 closeMapBtn.addEventListener("click", closeMap);
 mapModal.addEventListener("click", (event) => {
   if (event.target === mapModal) closeMap();

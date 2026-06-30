@@ -4,13 +4,15 @@ Private Browser-Spielansicht für bis zu 4 Spieler – gedacht für gemeinsame
 Pokémon SoulLink-/Nuzlocke-Runs per Bildschirmfreigabe (WebRTC) mit
 geteiltem Team-Tracking, Orden/Level-Cap und Karte.
 
-**Aktuelle Version:** v8.10-sprites
+**Aktuelle Version:** v8.11-sprites
 
 ## Features
 
 - **Bildschirmfreigabe per WebRTC** (P2P über Socket.IO-Signaling), Qualität
   einstellbar (480p/20 FPS bis 1080p/60 FPS).
-- **2×2-Raster** für bis zu 4 Spieler, Vollbild-Ansicht pro Kachel.
+- **2×2-Raster** für bis zu 4 Spieler, Vollbild-Ansicht pro Kachel, sowie ein
+  **Spotlight-Modus** (ein Stream groß, die anderen 3 klein als anklickbare
+  Vorschau-Reihe – Klick auf eine Vorschau macht sie zum Haupt-Stream).
 - **Team-Tracking pro Spieler:** 6 Slots mit Pokémon-Sprite (PokéAPI, Fallback
   auf pokemondb.net), Status `alive` / `dead` / `box`, deutsche Namen per
   Autocomplete (Gen 1). Klick auf einen Slot öffnet ein kleines Popup direkt
@@ -72,6 +74,11 @@ neu deployed werden, damit neue Socket-Events greifen.
 
 ## Versionsverlauf
 
+- **v8.11** – **Bugfix:** leere Pokémon-Slots waren unklickbar, weil sie
+  versehentlich die globale CSS-Klasse `.empty` (vom Video-Platzhalter,
+  `pointer-events: none`) mitbenutzt haben – jetzt eigene Klasse `slotEmpty`.
+  Neu: **Spotlight-Modus** (ein Stream groß, andere klein/anklickbar als
+  Alternative zum Vollbild).
 - **v8.10** – Topbar aufgeräumt (Einstellungen-Popup für Qualität, Spielauswahl,
   Debug-Toggle, Export, Team leeren). Pokémon-Auswahl von rechter Sidebar auf
   kleines Popup direkt am angeklickten Slot umgestellt.

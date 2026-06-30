@@ -31,6 +31,46 @@ body.hide-debug .debugBox { display: none; }
 #debugToggleBtn { background: #281326; color: white; border: 1px solid rgba(255,255,255,.25); }
 #exportBtn { background: #21a957; color: white; }
 body.focus .topbar, body.focus .status { display: none; }
+
+/* Spotlight-Modus: ein Stream groß, die anderen 3 als kleine, anklickbare
+   Vorschau-Reihe darunter. Im Unterschied zum Vollbild (oben) bleiben hier
+   alle Spieler sichtbar. */
+body.spotlight .grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 1fr 140px;
+  gap: 10px;
+}
+
+body.spotlight .tile.spotlightMain {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+body.spotlight .tile:not(.spotlightMain) {
+  grid-row: 2;
+}
+
+body.spotlight .tile:not(.spotlightMain) .videoWrap {
+  cursor: pointer;
+}
+
+body.spotlight .tile:not(.spotlightMain) .spriteTeamBar {
+  display: none;
+}
+
+body.spotlight .tile:not(.spotlightMain):hover {
+  border-color: rgba(155,80,255,.7);
+}
+
+#spotlightBtn { background: #281326; color: white; border: 1px solid rgba(255,255,255,.25); }
+
+@media (max-width: 900px) {
+  body.spotlight .grid {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 50vh 90px;
+  }
+}
 @media (max-width: 900px) {
   .topbar { display: block; }
   .controls { justify-content: flex-start; margin-top: 10px; }
@@ -75,15 +115,26 @@ body.focus .topbar, body.focus .status { display: none; }
 }
 
 /* leere Slots: beim eigenen (editierbaren) Spieler ein klickbarer "+"-Button,
-   bei anderen Spielern nur ein dezenter Platzhalter (kein Klick-Hinweis) */
-.spriteSlot.empty.editable::before {
-  content: "+";
-  color: rgba(255,255,255,.65);
-  font-weight: 900;
-  font-size: 18px;
+   bei anderen Spielern nur ein dezenter Platzhalter (kein Klick-Hinweis).
+   Eigene Klasse "slotEmpty" (NICHT "empty"!) um Kollision mit dem globalen
+   Video-Platzhalter ".empty" (pointer-events:none) zu vermeiden. */
+.spriteSlot.slotEmpty.editable {
+  background: rgba(255,255,255,.05);
 }
 
-.spriteSlot.empty:not(.editable) {
+.spriteSlot.slotEmpty.editable::before {
+  content: "+";
+  color: rgba(255,255,255,.85);
+  font-weight: 900;
+  font-size: 20px;
+}
+
+.spriteSlot.slotEmpty.editable:hover {
+  background: rgba(155,80,255,.28);
+  border-color: rgba(155,80,255,.7);
+}
+
+.spriteSlot.slotEmpty:not(.editable) {
   border-style: dashed;
   border-color: rgba(255,255,255,.18);
   background: rgba(255,255,255,.03);
