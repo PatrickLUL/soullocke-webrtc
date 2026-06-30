@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Soullocke Private Game View</title>
-  <link rel="stylesheet" href="/style.css?v=8.6" />
+  <link rel="stylesheet" href="/style.css?v=8.7" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <h1>Soullocke Private Game View <span id="versionBadge">v8.6-sprites</span></h1>
+      <h1>Soullocke Private Game View <span id="versionBadge">v8.7-sprites</span></h1>
       <p>Private Spielansicht für bis zu 4 Spieler</p>
     </div>
     <div class="controls">
@@ -29,17 +29,20 @@
   <main id="grid" class="grid"></main>
   <template id="tileTemplate">
     <section class="tile">
-      <div class="label"><span class="dot"></span><span class="name">Leer</span></div>
-      <button class="fullscreenBtn" title="Groß anzeigen">⛶</button>
-      <video autoplay muted playsinline></video>
-      <button class="playOverlay">Video anzeigen</button>
-      <pre class="debugBox">debug...</pre>
-      <div class="empty">Warte auf Spieler...</div>
+      <div class="spriteTeamBar"></div>
+      <div class="videoWrap">
+        <div class="label"><span class="dot"></span><span class="name">Leer</span></div>
+        <button class="fullscreenBtn" title="Groß anzeigen">⛶</button>
+        <video autoplay muted playsinline></video>
+        <button class="playOverlay">Video anzeigen</button>
+        <pre class="debugBox">debug...</pre>
+        <div class="empty">Warte auf Spieler...</div>
+      </div>
     </section>
   </template>
   <datalist id="pokemonSuggestions"></datalist>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=8.6"></script>
+  <script src="/app.js?v=8.7"></script>
 </body>
 </html>

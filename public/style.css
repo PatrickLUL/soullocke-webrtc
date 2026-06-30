@@ -12,8 +12,9 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 #stopBtn { background: #281326; color: white; border: 1px solid rgba(255,255,255,.25); }
 .status { padding: 8px 18px; background: #151522; border-bottom: 1px solid rgba(255,255,255,.12); }
 .grid { height: calc(100vh - 120px); padding: 10px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; }
-.tile { position: relative; overflow: hidden; border-radius: 14px; background: #050509; border: 2px solid rgba(255,255,255,.22); }
-.tile video { width: 100%; height: 100%; object-fit: contain; background: #030306; }
+.tile { position: relative; overflow: hidden; border-radius: 14px; background: #050509; border: 2px solid rgba(255,255,255,.22); display: flex; flex-direction: column; }
+.videoWrap { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.videoWrap video { width: 100%; height: 100%; object-fit: contain; background: #030306; }
 .label { position: absolute; z-index: 3; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 999px; background: rgba(0,0,0,.72); font-size: 14px; font-weight: 800; }
 .dot { width: 9px; height: 9px; display: inline-block; border-radius: 50%; background: #888; }
 .tile.has-video .dot { background: #30ff82; }
@@ -25,7 +26,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .tile.needs-play .playOverlay { display: block; }
 .debugBox { position: absolute; z-index: 5; left: 10px; right: 10px; bottom: 8px; max-height: 116px; overflow: auto; margin: 0; padding: 8px; border-radius: 8px; background: rgba(0,0,0,.72); color: #bfffd1; font-size: 11px; white-space: pre-wrap; }
 body.focus .tile { display: none; }
-body.focus .tile.focused { display: block; position: fixed; inset: 0; z-index: 20; border-radius: 0; border: 0; }
+body.focus .tile.focused { display: flex; position: fixed; inset: 0; z-index: 20; border-radius: 0; border: 0; }
 body.focus .topbar, body.focus .status { display: none; }
 @media (max-width: 900px) {
   .topbar { display: block; }
@@ -36,30 +37,20 @@ body.focus .topbar, body.focus .status { display: none; }
 
 /* v8 sprite overlay */
 .spriteTeamBar {
-  position: absolute;
-  z-index: 6;
-  top: 44px;
-  left: 14px;
+  position: static;
+  z-index: auto;
   display: flex;
-  gap: 4px;
-  padding: 4px 6px;
-  border-radius: 999px;
-  background: rgba(0,0,0,.32);
-  border: 1px solid rgba(255,255,255,.14);
-  backdrop-filter: blur(4px);
-  transition: background .15s ease, opacity .15s ease;
-  opacity: .8;
-}
-
-.spriteTeamBar:hover {
-  background: rgba(0,0,0,.62);
-  opacity: 1;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 6px 10px;
+  background: #0d0d16;
+  border-bottom: 1px solid rgba(255,255,255,.14);
 }
 
 .spriteSlot {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   display: grid;
   place-items: center;
   background: rgba(255,255,255,.08);
@@ -74,8 +65,8 @@ body.focus .topbar, body.focus .status { display: none; }
 }
 
 .spriteSlot img {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   image-rendering: pixelated;
   object-fit: contain;
 }
@@ -105,9 +96,9 @@ body.focus .topbar, body.focus .status { display: none; }
 .spriteSlot.dead::after {
   content: "☠";
   position: absolute;
-  right: -4px;
-  bottom: -4px;
-  font-size: 10px;
+  right: -5px;
+  bottom: -5px;
+  font-size: 13px;
   text-shadow: 0 1px 3px #000;
 }
 
@@ -119,21 +110,21 @@ body.focus .topbar, body.focus .status { display: none; }
 .spriteSlot.box::after {
   content: "📦";
   position: absolute;
-  right: -5px;
-  bottom: -5px;
-  font-size: 9px;
+  right: -7px;
+  bottom: -7px;
+  font-size: 12px;
   text-shadow: 0 1px 3px #000;
 }
 
 .spriteEditButton {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   padding: 0;
   background: rgba(155,80,255,.85);
   color: white;
   border: 1px solid rgba(255,255,255,.22);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .spriteEditor {
@@ -214,20 +205,19 @@ body.editor-open .grid {
 
 @media (max-width: 900px) {
   .spriteTeamBar {
-    top: 42px;
-    left: 10px;
-    gap: 3px;
+    padding: 5px 8px;
+    gap: 4px;
   }
 
   .spriteSlot,
   .spriteEditButton {
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
   }
 
   .spriteSlot img {
-    width: 18px;
-    height: 18px;
+    width: 23px;
+    height: 23px;
   }
 }
 

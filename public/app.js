@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.6-sprites";
+const APP_VERSION = "v8.7-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -226,12 +226,8 @@ function renderSpriteBar(playerId) {
   const data = tiles.get(playerId);
   if (!data) return;
 
-  let bar = data.tile.querySelector(".spriteTeamBar");
-  if (!bar) {
-    bar = document.createElement("div");
-    bar.className = "spriteTeamBar";
-    data.tile.appendChild(bar);
-  }
+  const bar = data.tile.querySelector(".spriteTeamBar");
+  if (!bar) return;
 
   const team = getTeam(playerId);
   const editable = playerId === myId && joined;
