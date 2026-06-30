@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.7-sprites";
+const APP_VERSION = "v8.9-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -8,6 +8,15 @@ const qualitySelect = document.querySelector("#qualitySelect");
 const joinBtn = document.querySelector("#joinBtn");
 const shareBtn = document.querySelector("#shareBtn");
 const stopBtn = document.querySelector("#stopBtn");
+const debugToggleBtn = document.querySelector("#debugToggleBtn");
+const exportBtn = document.querySelector("#exportBtn");
+const gameSelect = document.querySelector("#gameSelect");
+const mapBtn = document.querySelector("#mapBtn");
+const closeMapBtn = document.querySelector("#closeMapBtn");
+const mapModal = document.querySelector("#mapModal");
+const mapSvgContainer = document.querySelector("#mapSvgContainer");
+const mapInfoPanel = document.querySelector("#mapInfoPanel");
+const mapGameLabel = document.querySelector("#mapGameLabel");
 const statusEl = document.querySelector("#status");
 const grid = document.querySelector("#grid");
 const tileTemplate = document.querySelector("#tileTemplate");
@@ -28,6 +37,8 @@ const debugState = new Map();
 const frameCounters = new Map();
 const lastStats = new Map();
 const teams = new Map();
+const badges = new Map();
+let currentGame = "hgss";
 
 const POKEMON_MAP = {
   "bisasam":1,"bulbasaur":1,"bisaknosp":2,"ivysaur":2,"bisaflor":3,"venusaur":3,
@@ -79,6 +90,53 @@ function setupPokemonSuggestions() {
     .sort((a, b) => a.localeCompare(b))
     .map(name => `<option value="${name}"></option>`)
     .join("");
+}
+
+// Quelle für Level-Caps: Nuzlocke University, "Hardcore Nuzlocke Level Caps by Generation"
+// (https://nuzlockeuniversity.ca/2022/01/18/hardcore-nuzlocke-level-caps-by-generation/)
+// Ace-Level des jeweiligen Gym-Leaders/Champs pro Orden. Kanto-Orden-Reihenfolge ist im
+// Spiel nicht strikt vorgegeben, hier in der von Nuzlocke University gelisteten Reihenfolge.
+const GAMES = {
+  hgss: {
+    label: "HeartGold / SoulSilver",
+    badgeNames: [
+      "Falkner – Violet City", "Bugsy – Azalea Town", "Whitney – Goldenrod City",
+      "Morty – Ecruteak City", "Chuck – Cianwood City", "Jasmine – Olivine City",
+      "Pryce – Mahogany Town", "Clair – Blackthorn City",
+      "Brock – Pewter City", "Misty – Cerulean City", "Lt. Surge – Vermilion City",
+      "Erika – Celadon City", "Janine – Fuchsia City", "Sabrina – Saffron City",
+      "Blaine – Seafoam Islands", "Blue – Viridian City"
+    ],
+    badgeCaps: [13, 17, 19, 25, 31, 35, 34, 41, 54, 54, 53, 56, 50, 55, 59, 60],
+    eliteFour: [42, 44, 46, 47],
+    champion: { name: "Lance (Champion, nach Johto-Orden 8)", cap: 50 },
+    postgame: { name: "Red – Mt. Silver", cap: 88 }
+  }
+};
+
+function getGame(key) { return GAMES[key] || GAMES.hgss; }
+
+function levelCapForBadges(gameKey, count) {
+  const g = getGame(gameKey);
+  if (count <= 0) return null;
+  if (count <= g.badgeCaps.length) return g.badgeCaps[count - 1];
+  return g.postgame.cap;
+}
+
+function badgeMilestoneLabel(gameKey, count) {
+  const g = getGame(gameKey);
+  if (count <= 0) return "Noch keinen Orden";
+  if (count <= g.badgeNames.length) return g.badgeNames[count - 1];
+  return g.postgame.name;
+}
+
+function buildMilestoneTooltip(gameKey) {
+  const g = getGame(gameKey);
+  const lines = g.badgeNames.map((name, i) => `${i + 1}. ${name}: Cap Lv ${g.badgeCaps[i]}`);
+  lines.push(`Top 4 (nach Johto-Orden 8): Lv ${g.eliteFour.join(" / ")}`);
+  lines.push(`${g.champion.name}: Lv ${g.champion.cap}`);
+  lines.push(`${g.postgame.name}: Lv ${g.postgame.cap}`);
+  return lines.join("\n");
 }
 
 
@@ -196,6 +254,17 @@ function getTeam(playerId) {
   return teams.get(playerId) || emptyTeam();
 }
 
+function getBadges(playerId) {
+  return badges.get(playerId) || 0;
+}
+
+function setMyBadges(count) {
+  const safe = Math.max(0, Math.min(16, count));
+  badges.set(myId, safe);
+  socket.emit("update-badges", { badges: safe });
+  renderAllSpriteBars();
+}
+
 function normalizePokemonName(value) {
   return String(value || "")
     .trim()
@@ -262,6 +331,44 @@ function renderSpriteBar(playerId) {
     edit.addEventListener("click", openSpriteEditor);
     bar.appendChild(edit);
   }
+
+  const badgeCount = getBadges(playerId);
+  const cap = levelCapForBadges(currentGame, badgeCount);
+  const milestone = badgeMilestoneLabel(currentGame, badgeCount);
+
+  const levelCapBadge = document.createElement("div");
+  levelCapBadge.className = "levelCapBadge";
+  levelCapBadge.title = `${milestone}\n\n${buildMilestoneTooltip(currentGame)}`;
+
+  const countLabel = document.createElement("span");
+  countLabel.className = "badgeCountLabel";
+  countLabel.textContent = `🏅 ${badgeCount}/16`;
+  levelCapBadge.appendChild(countLabel);
+
+  const capLabel = document.createElement("span");
+  capLabel.className = "levelCapLabel";
+  capLabel.textContent = cap ? `Cap Lv ${cap}` : "Start";
+  levelCapBadge.appendChild(capLabel);
+
+  if (editable) {
+    const minus = document.createElement("button");
+    minus.type = "button";
+    minus.className = "badgeStep";
+    minus.textContent = "–";
+    minus.title = "Orden entfernen";
+    minus.addEventListener("click", () => setMyBadges(badgeCount - 1));
+
+    const plus = document.createElement("button");
+    plus.type = "button";
+    plus.className = "badgeStep";
+    plus.textContent = "+";
+    plus.title = "Orden hinzufügen";
+    plus.addEventListener("click", () => setMyBadges(badgeCount + 1));
+
+    levelCapBadge.append(minus, plus);
+  }
+
+  bar.appendChild(levelCapBadge);
 }
 
 function renderAllSpriteBars() {
@@ -374,6 +481,88 @@ function closeSpriteEditor(editor) {
   document.body.classList.remove("editor-open");
 }
 
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function buildMapSVG(gameKey) {
+  const g = getGame(gameKey);
+  const cols = 8;
+  const spacing = 90;
+  const startX = 55;
+  const johtoY = 70;
+  const kantoY = 230;
+  const redY = 340;
+
+  const positions = [];
+  for (let i = 0; i < 8; i++) {
+    positions.push({ x: startX + i * spacing, y: johtoY, label: g.badgeNames[i], cap: g.badgeCaps[i], n: i + 1 });
+  }
+  for (let i = 0; i < 8; i++) {
+    positions.push({ x: startX + i * spacing, y: kantoY, label: g.badgeNames[8 + i], cap: g.badgeCaps[8 + i], n: i + 9 });
+  }
+  positions.push({ x: startX + 7 * spacing, y: redY, label: g.postgame.name, cap: g.postgame.cap, n: 17 });
+
+  let linesHtml = "";
+  for (let i = 0; i < positions.length - 1; i++) {
+    const a = positions[i];
+    const b = positions[i + 1];
+    linesHtml += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="mapLine" />`;
+  }
+
+  let nodesHtml = "";
+  positions.forEach(p => {
+    nodesHtml += `
+      <g class="mapNode" tabindex="0" data-name="${escapeHtml(p.label)}" data-cap="${p.cap}" data-n="${p.n}">
+        <circle cx="${p.x}" cy="${p.y}" r="17"></circle>
+        <text x="${p.x}" y="${p.y + 5}" text-anchor="middle">${p.n}</text>
+      </g>`;
+  });
+
+  return `<svg viewBox="0 0 740 380" xmlns="http://www.w3.org/2000/svg">
+    <text x="55" y="30" class="mapSectionLabel">Johto</text>
+    <text x="55" y="190" class="mapSectionLabel">Kanto</text>
+    ${linesHtml}
+    ${nodesHtml}
+  </svg>`;
+}
+
+function openMap() {
+  mapGameLabel.textContent = getGame(currentGame).label;
+  mapSvgContainer.innerHTML = buildMapSVG(currentGame);
+  mapInfoPanel.textContent = "Klicke auf eine Station für Details zu Orden & Level-Cap.";
+  mapModal.classList.remove("hidden");
+}
+
+function closeMap() {
+  mapModal.classList.add("hidden");
+}
+
+mapBtn.addEventListener("click", openMap);
+closeMapBtn.addEventListener("click", closeMap);
+mapModal.addEventListener("click", (event) => {
+  if (event.target === mapModal) closeMap();
+});
+
+mapSvgContainer.addEventListener("click", (event) => {
+  const node = event.target.closest(".mapNode");
+  if (!node) return;
+  mapSvgContainer.querySelectorAll(".mapNode.selected").forEach(el => el.classList.remove("selected"));
+  node.classList.add("selected");
+  mapInfoPanel.innerHTML = `<strong>#${node.dataset.n} – ${node.dataset.name}</strong><br>Level-Cap: Lv ${node.dataset.cap}`;
+});
+
+gameSelect.addEventListener("change", () => {
+  currentGame = gameSelect.value;
+  socket.emit("update-game", { game: currentGame });
+  renderAllSpriteBars();
+  if (!mapModal.classList.contains("hidden")) openMap();
+});
 
 function rebuildTiles() {
   tiles.clear();
@@ -649,6 +838,64 @@ shareBtn.addEventListener("click", async () => {
 stopBtn.addEventListener("click", stopSharing);
 qualitySelect.addEventListener("change", applyQualityToAllSenders);
 
+let debugVisible = localStorage.getItem("soullockeDebugVisible") === "true";
+function updateDebugToggleLabel() {
+  debugToggleBtn.textContent = debugVisible ? "Debug: An" : "Debug: Aus";
+}
+document.body.classList.toggle("hide-debug", !debugVisible);
+updateDebugToggleLabel();
+
+debugToggleBtn.addEventListener("click", () => {
+  debugVisible = !debugVisible;
+  localStorage.setItem("soullockeDebugVisible", String(debugVisible));
+  document.body.classList.toggle("hide-debug", !debugVisible);
+  updateDebugToggleLabel();
+});
+
+function buildTeamExport() {
+  const ordered = [...players.values()].sort((a, b) => a.joinedAt - b.joinedAt);
+  return {
+    room: roomId,
+    game: currentGame,
+    gameLabel: getGame(currentGame).label,
+    exportedAt: new Date().toISOString(),
+    players: ordered.map(p => {
+      const team = getTeam(p.id);
+      const alive = [];
+      const dead = [];
+      const boxed = [];
+      team.forEach(slot => {
+        if (!slot.pokemon) return;
+        const target = slot.status === "dead" ? dead : slot.status === "box" ? boxed : alive;
+        target.push(slot.pokemon);
+      });
+      const badgeCount = getBadges(p.id);
+      return {
+        name: p.name,
+        alive,
+        dead,
+        boxed,
+        badges: badgeCount,
+        levelCap: levelCapForBadges(currentGame, badgeCount),
+        milestone: badgeMilestoneLabel(currentGame, badgeCount)
+      };
+    })
+  };
+}
+
+exportBtn.addEventListener("click", () => {
+  const data = buildTeamExport();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `soullocke-export-${roomId || "raum"}-${Date.now()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
 document.body.addEventListener("click", (event) => {
   for (const id of activeStreams.keys()) resumeVideo(id);
 
@@ -678,9 +925,14 @@ socket.on("joined", data => {
   for (const p of data.players) players.set(p.id, p);
   teams.clear();
   if (data.teams) for (const [id, team] of Object.entries(data.teams)) teams.set(id, team);
+  badges.clear();
+  if (data.badges) for (const [id, count] of Object.entries(data.badges)) badges.set(id, count);
+  currentGame = data.game || "hgss";
+  gameSelect.value = currentGame;
 
   joinBtn.disabled = true;
   shareBtn.disabled = false;
+  exportBtn.disabled = false;
   rebuildTiles();
   ensureAllPeers();
 
@@ -701,6 +953,19 @@ socket.on("teams", data => {
   teams.clear();
   if (data) for (const [id, team] of Object.entries(data)) teams.set(id, team);
   renderAllSpriteBars();
+});
+
+socket.on("badges", data => {
+  badges.clear();
+  if (data) for (const [id, count] of Object.entries(data)) badges.set(id, count);
+  renderAllSpriteBars();
+});
+
+socket.on("game-changed", ({ game }) => {
+  currentGame = game || "hgss";
+  gameSelect.value = currentGame;
+  renderAllSpriteBars();
+  if (!mapModal.classList.contains("hidden")) openMap();
 });
 
 socket.on("peer-stopped-sharing", ({ peerId }) => clearStreamFromTile(peerId));

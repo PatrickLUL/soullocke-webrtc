@@ -27,6 +27,9 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .debugBox { position: absolute; z-index: 5; left: 10px; right: 10px; bottom: 8px; max-height: 116px; overflow: auto; margin: 0; padding: 8px; border-radius: 8px; background: rgba(0,0,0,.72); color: #bfffd1; font-size: 11px; white-space: pre-wrap; }
 body.focus .tile { display: none; }
 body.focus .tile.focused { display: flex; position: fixed; inset: 0; z-index: 20; border-radius: 0; border: 0; }
+body.hide-debug .debugBox { display: none; }
+#debugToggleBtn { background: #281326; color: white; border: 1px solid rgba(255,255,255,.25); }
+#exportBtn { background: #21a957; color: white; }
 body.focus .topbar, body.focus .status { display: none; }
 @media (max-width: 900px) {
   .topbar { display: block; }
@@ -125,6 +128,36 @@ body.focus .topbar, body.focus .status { display: none; }
   color: white;
   border: 1px solid rgba(255,255,255,.22);
   font-size: 13px;
+}
+
+.levelCapBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.16);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badgeCountLabel { opacity: .9; }
+.levelCapLabel { color: #ffd24a; }
+
+.badgeStep {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  padding: 0;
+  line-height: 1;
+  font-size: 13px;
+  font-weight: 900;
+  background: rgba(255,255,255,.14);
+  color: white;
+  border: 1px solid rgba(255,255,255,.22);
 }
 
 .spriteEditor {
@@ -248,4 +281,94 @@ body.editor-open .grid {
 .spriteEditor select,
 .spriteEditor button {
   pointer-events: auto;
+}
+
+
+/* v8.9 game selection, badges & interactive map */
+#gameSelect { background: white; color: #111; }
+
+.mapModal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.65);
+}
+
+.mapModal.hidden { display: none; }
+
+.mapModalInner {
+  width: min(820px, calc(100vw - 40px));
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  background: #14141f;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 20px 80px rgba(0,0,0,.6);
+}
+
+.mapModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.mapModalHeader button {
+  background: rgba(255,255,255,.12);
+  color: white;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.mapSvgContainer { width: 100%; }
+.mapSvgContainer svg { width: 100%; height: auto; display: block; }
+
+.mapLine { stroke: rgba(255,255,255,.25); stroke-width: 2; }
+
+.mapSectionLabel {
+  fill: rgba(255,255,255,.55);
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.mapNode circle {
+  fill: rgba(155,80,255,.55);
+  stroke: rgba(255,255,255,.4);
+  stroke-width: 1.5;
+  cursor: pointer;
+  transition: fill .15s ease, stroke .15s ease;
+}
+
+.mapNode text {
+  fill: white;
+  font-size: 12px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.mapNode:hover circle,
+.mapNode:focus circle {
+  fill: rgba(155,80,255,.85);
+}
+
+.mapNode.selected circle {
+  fill: #21a957;
+  stroke: white;
+}
+
+.mapInfoPanel {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
+  font-size: 14px;
+  min-height: 20px;
 }

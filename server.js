@@ -26,7 +26,9 @@ function getRoom(roomId) {
   if (!rooms.has(roomId)) {
     rooms.set(roomId, {
       players: new Map(),
-      teams: {}
+      teams: {},
+      badges: {},
+      game: "hgss"
     });
   }
   return rooms.get(roomId);
@@ -46,6 +48,10 @@ function broadcastTeams(roomId) {
   io.to(roomId).emit("teams", getRoom(roomId).teams);
 }
 
+function broadcastBadges(roomId) {
+  io.to(roomId).emit("badges", getRoom(roomId).badges);
+}
+
 io.on("connection", socket => {
   socket.on("join-room", ({ roomId, name }) => {
     roomId = String(roomId || "").trim().slice(0, 40);
@@ -61,10 +67,19 @@ io.on("connection", socket => {
     socket.data.roomId = roomId;
     room.players.set(socket.id, { id: socket.id, name, joinedAt: Date.now(), isSharing: false });
     if (!room.teams[socket.id]) room.teams[socket.id] = defaultTeam();
+    if (typeof room.badges[socket.id] !== "number") room.badges[socket.id] = 0;
 
-    socket.emit("joined", { myId: socket.id, roomId, players: playerList(roomId), teams: room.teams });
+    socket.emit("joined", {
+      myId: socket.id,
+      roomId,
+      players: playerList(roomId),
+      teams: room.teams,
+      badges: room.badges,
+      game: room.game
+    });
     broadcastPlayers(roomId);
     broadcastTeams(roomId);
+    broadcastBadges(roomId);
   });
 
   socket.on("start-sharing", () => {
@@ -101,6 +116,28 @@ io.on("connection", socket => {
     broadcastTeams(roomId);
   });
 
+  socket.on("update-badges", ({ badges }) => {
+    const roomId = socket.data.roomId;
+    if (!roomId) return;
+
+    const room = getRoom(roomId);
+    const safeBadges = Math.max(0, Math.min(16, Number.parseInt(badges, 10) || 0));
+    room.badges[socket.id] = safeBadges;
+    broadcastBadges(roomId);
+  });
+
+  socket.on("update-game", ({ game }) => {
+    const roomId = socket.data.roomId;
+    if (!roomId) return;
+
+    const room = getRoom(roomId);
+    const allowedGames = ["hgss"];
+    if (allowedGames.includes(game)) {
+      room.game = game;
+      io.to(roomId).emit("game-changed", { game: room.game });
+    }
+  });
+
   socket.on("quality-changed", ({ quality }) => {
     const roomId = socket.data.roomId;
     if (roomId) socket.to(roomId).emit("peer-quality-changed", { peerId: socket.id, quality });
@@ -119,6 +156,7 @@ io.on("connection", socket => {
     else {
       broadcastPlayers(roomId);
       broadcastTeams(roomId);
+      broadcastBadges(roomId);
     }
   });
 });
