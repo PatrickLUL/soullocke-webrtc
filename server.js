@@ -55,7 +55,6 @@ io.on("connection", socket => {
     const p = getRoom(roomId).get(socket.id);
     if (p) p.isSharing = true;
     broadcastPlayers(roomId);
-    socket.to(roomId).emit("peer-started-sharing", { peerId: socket.id });
   });
 
   socket.on("stop-sharing", () => {
@@ -67,10 +66,13 @@ io.on("connection", socket => {
     socket.to(roomId).emit("peer-stopped-sharing", { peerId: socket.id });
   });
 
-  socket.on("request-stream", ({ fromPeerId }) => io.to(fromPeerId).emit("stream-requested", { requesterId: socket.id }));
-  socket.on("webrtc-offer", ({ to, description }) => io.to(to).emit("webrtc-offer", { from: socket.id, description }));
-  socket.on("webrtc-answer", ({ to, description }) => io.to(to).emit("webrtc-answer", { from: socket.id, description }));
-  socket.on("webrtc-ice", ({ to, candidate }) => io.to(to).emit("webrtc-ice", { from: socket.id, candidate }));
+  socket.on("webrtc-description", ({ to, description }) => {
+    io.to(to).emit("webrtc-description", { from: socket.id, description });
+  });
+
+  socket.on("webrtc-ice", ({ to, candidate }) => {
+    io.to(to).emit("webrtc-ice", { from: socket.id, candidate });
+  });
 
   socket.on("disconnect", () => {
     const roomId = socket.data.roomId;

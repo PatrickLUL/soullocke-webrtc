@@ -1,6 +1,6 @@
 {
-  "name": "soullocke-webrtc-v4-debug",
-  "version": "1.0.3",
+  "name": "soullocke-webrtc-v5-perfect",
+  "version": "1.0.4",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

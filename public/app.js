@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v4-debug";
+const APP_VERSION = "v5-perfect";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -19,9 +19,7 @@ let joined = false;
 
 const players = new Map();
 const tiles = new Map();
-const outgoingPeers = new Map();
-const incomingPeers = new Map();
-const pendingIce = new Map();
+const peers = new Map();
 const activeStreams = new Map();
 const debugState = new Map();
 
@@ -36,8 +34,7 @@ const iceConfig = {
 function setStatus(text) { statusEl.textContent = text; }
 
 function setDebug(id, patch) {
-  const current = debugState.get(id) || {};
-  debugState.set(id, { ...current, ...patch });
+  debugState.set(id, { ...(debugState.get(id) || {}), ...patch });
   renderDebug(id);
 }
 
@@ -46,18 +43,17 @@ function renderDebug(id) {
   if (!data) return;
   const s = debugState.get(id) || {};
   const v = data.video;
-  const lines = [
+  data.debugBox.textContent = [
     APP_VERSION,
     `socket: ${socket.connected ? "connected" : "offline"}`,
     `peer: ${s.peer || "-"}`,
     `ice: ${s.ice || "-"}`,
+    `signal: ${s.signal || "-"}`,
     `track: ${s.track || "-"}`,
     `video: ${v.videoWidth || 0}x${v.videoHeight || 0}`,
     `ready: ${v.readyState}`,
-    `paused: ${v.paused}`,
-    `muted: ${v.muted}`
-  ];
-  data.debugBox.textContent = lines.join("\n");
+    `paused: ${v.paused}`
+  ].join("\n");
 }
 
 function getRoomFromUrl() {
@@ -122,17 +118,14 @@ async function resumeVideo(playerId) {
   const data = tiles.get(playerId);
   if (!data || !data.video.srcObject) return;
 
-  data.video.muted = true;
-  data.video.defaultMuted = true;
-  data.video.playsInline = true;
-
   try {
+    data.video.muted = true;
+    data.video.defaultMuted = true;
+    data.video.playsInline = true;
     await data.video.play();
     data.tile.classList.remove("needs-play");
-    setStatus("Video gestartet.");
-  } catch (e) {
-    console.warn("manual play failed", e);
-    setStatus("Video konnte nicht starten. Debug unten prüfen.");
+  } catch {
+    data.tile.classList.add("needs-play");
   }
   renderDebug(playerId);
 }
@@ -154,24 +147,13 @@ function attachStreamToTile(playerId, stream) {
   }
 
   data.video.srcObject = stream;
-  data.video.muted = true;
-  data.video.defaultMuted = true;
-  data.video.playsInline = true;
   data.tile.classList.add("has-video", "connected");
-
   data.video.onloadedmetadata = () => resumeVideo(playerId);
   data.video.oncanplay = () => resumeVideo(playerId);
   data.video.onresize = () => renderDebug(playerId);
   data.video.ontimeupdate = () => renderDebug(playerId);
 
-  const promise = data.video.play();
-  if (promise && promise.catch) {
-    promise.catch(() => {
-      data.tile.classList.add("needs-play");
-      setStatus("Video empfangen. Klicke im schwarzen Feld auf „Video anzeigen“.");
-      renderDebug(playerId);
-    });
-  }
+  resumeVideo(playerId);
   renderDebug(playerId);
 }
 
@@ -184,88 +166,89 @@ function clearStreamFromTile(playerId) {
   renderDebug(playerId);
 }
 
-function closePeer(map, peerId) {
-  const pc = map.get(peerId);
-  if (pc) pc.close();
-  map.delete(peerId);
-}
+function addLocalTracks(peerId) {
+  const item = peers.get(peerId);
+  if (!item || !localStream) return;
 
-function addPendingIce(peerId, candidate) {
-  if (!pendingIce.has(peerId)) pendingIce.set(peerId, []);
-  pendingIce.get(peerId).push(candidate);
-}
-
-async function flushPendingIce(peerId, pc) {
-  const list = pendingIce.get(peerId) || [];
-  pendingIce.delete(peerId);
-  for (const c of list) {
-    try { await pc.addIceCandidate(c); } catch (e) { console.warn("queued ICE failed", e); }
+  const senders = item.pc.getSenders();
+  for (const track of localStream.getTracks()) {
+    if (!senders.some(sender => sender.track === track)) {
+      item.pc.addTrack(track, localStream);
+    }
   }
 }
 
-function createOutgoingPeer(viewerId) {
-  closePeer(outgoingPeers, viewerId);
+function ensurePeer(peerId) {
+  if (peerId === myId) return null;
+  if (peers.has(peerId)) return peers.get(peerId);
+
   const pc = new RTCPeerConnection(iceConfig);
-  outgoingPeers.set(viewerId, pc);
-  setDebug(viewerId, { peer: "outgoing-created", ice: pc.iceConnectionState });
+  const item = {
+    pc,
+    makingOffer: false,
+    ignoreOffer: false,
+    polite: myId > peerId
+  };
 
-  for (const track of localStream.getTracks()) pc.addTrack(track, localStream);
+  peers.set(peerId, item);
+  setDebug(peerId, { peer: "created", ice: pc.iceConnectionState, signal: pc.signalingState });
 
-  pc.onicecandidate = e => {
-    if (e.candidate) socket.emit("webrtc-ice", { to: viewerId, candidate: e.candidate });
+  pc.ontrack = event => {
+    const stream = event.streams[0] || new MediaStream([event.track]);
+    attachStreamToTile(peerId, stream);
+  };
+
+  pc.onicecandidate = event => {
+    if (event.candidate) socket.emit("webrtc-ice", { to: peerId, candidate: event.candidate });
   };
 
   pc.onconnectionstatechange = () => {
-    setDebug(viewerId, { peer: pc.connectionState });
-    if (pc.connectionState === "failed" || pc.connectionState === "closed") closePeer(outgoingPeers, viewerId);
-  };
-
-  pc.oniceconnectionstatechange = () => setDebug(viewerId, { ice: pc.iceConnectionState });
-  return pc;
-}
-
-function createIncomingPeer(streamerId) {
-  closePeer(incomingPeers, streamerId);
-  const pc = new RTCPeerConnection(iceConfig);
-  incomingPeers.set(streamerId, pc);
-  setDebug(streamerId, { peer: "incoming-created", ice: pc.iceConnectionState });
-
-  pc.ontrack = e => {
-    const stream = e.streams[0] || new MediaStream([e.track]);
-    attachStreamToTile(streamerId, stream);
-  };
-
-  pc.onicecandidate = e => {
-    if (e.candidate) socket.emit("webrtc-ice", { to: streamerId, candidate: e.candidate });
-  };
-
-  pc.onconnectionstatechange = () => {
-    setDebug(streamerId, { peer: pc.connectionState });
+    setDebug(peerId, { peer: pc.connectionState });
     if (pc.connectionState === "connected") {
-      const p = players.get(streamerId);
-      setStatus(`Verbunden mit ${p?.name || "Mitspieler"}.`);
+      const p = players.get(peerId);
+      setStatus(`${APP_VERSION}: verbunden mit ${p?.name || "Mitspieler"}`);
     }
-    if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-      closePeer(incomingPeers, streamerId);
-      clearStreamFromTile(streamerId);
+    if (pc.connectionState === "failed") restartIce(peerId);
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    setDebug(peerId, { ice: pc.iceConnectionState });
+    if (pc.iceConnectionState === "failed") restartIce(peerId);
+  };
+
+  pc.onsignalingstatechange = () => setDebug(peerId, { signal: pc.signalingState });
+
+  pc.onnegotiationneeded = async () => {
+    try {
+      item.makingOffer = true;
+      await pc.setLocalDescription();
+      socket.emit("webrtc-description", { to: peerId, description: pc.localDescription });
+    } catch (err) {
+      console.warn("negotiation failed", err);
+    } finally {
+      item.makingOffer = false;
     }
   };
 
-  pc.oniceconnectionstatechange = () => setDebug(streamerId, { ice: pc.iceConnectionState });
-  return pc;
+  if (localStream) addLocalTracks(peerId);
+  return item;
 }
 
-async function offerStreamTo(viewerId) {
-  if (!localStream || viewerId === myId) return;
-  const pc = createOutgoingPeer(viewerId);
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  socket.emit("webrtc-offer", { to: viewerId, description: pc.localDescription });
+async function restartIce(peerId) {
+  const item = peers.get(peerId);
+  if (!item) return;
+  try {
+    item.pc.restartIce();
+    await item.pc.setLocalDescription(await item.pc.createOffer({ iceRestart: true }));
+    socket.emit("webrtc-description", { to: peerId, description: item.pc.localDescription });
+  } catch (err) {
+    console.warn("ICE restart failed", err);
+  }
 }
 
-function requestExistingStreams() {
+function ensureAllPeers() {
   for (const p of players.values()) {
-    if (p.id !== myId && p.isSharing) socket.emit("request-stream", { fromPeerId: p.id });
+    if (p.id !== myId) ensurePeer(p.id);
   }
 }
 
@@ -279,26 +262,33 @@ async function startSharing() {
   shareBtn.disabled = true;
   stopBtn.disabled = false;
 
-  socket.emit("start-sharing");
-
+  ensureAllPeers();
   for (const p of players.values()) {
-    if (p.id !== myId) await offerStreamTo(p.id);
+    if (p.id !== myId) addLocalTracks(p.id);
   }
 
+  socket.emit("start-sharing");
   localStream.getVideoTracks()[0].addEventListener("ended", stopSharing);
-  setStatus("Spiel wird geteilt.");
+  setStatus(`${APP_VERSION}: Spiel wird geteilt.`);
 }
 
 function stopSharing() {
   if (!localStream) return;
+
   for (const track of localStream.getTracks()) track.stop();
+
+  for (const item of peers.values()) {
+    for (const sender of item.pc.getSenders()) {
+      if (sender.track) item.pc.removeTrack(sender);
+    }
+  }
+
   localStream = null;
-  for (const id of outgoingPeers.keys()) closePeer(outgoingPeers, id);
   clearStreamFromTile(myId);
   shareBtn.disabled = !joined;
   stopBtn.disabled = true;
   socket.emit("stop-sharing");
-  setStatus("Stream gestoppt.");
+  setStatus(`${APP_VERSION}: Stream gestoppt.`);
 }
 
 function joinRoom() {
@@ -327,15 +317,16 @@ socket.on("joined", data => {
   joined = true;
   myId = data.myId;
   roomId = data.roomId;
+
   players.clear();
   for (const p of data.players) players.set(p.id, p);
 
   joinBtn.disabled = true;
   shareBtn.disabled = false;
   rebuildTiles();
+  ensureAllPeers();
 
-  setStatus(`${APP_VERSION}: Verbunden. Link für Freunde: ${location.origin}/room/${encodeURIComponent(roomId)}`);
-  requestExistingStreams();
+  setStatus(`${APP_VERSION}: Verbunden. Link: ${location.origin}/room/${encodeURIComponent(roomId)}`);
 });
 
 socket.on("join-error", setStatus);
@@ -344,47 +335,53 @@ socket.on("players", list => {
   players.clear();
   for (const p of list) players.set(p.id, p);
   rebuildTiles();
-  requestExistingStreams();
+  ensureAllPeers();
 });
 
-socket.on("peer-started-sharing", ({ peerId }) => {
-  if (peerId !== myId) socket.emit("request-stream", { fromPeerId: peerId });
-});
+socket.on("peer-stopped-sharing", ({ peerId }) => clearStreamFromTile(peerId));
 
-socket.on("peer-stopped-sharing", ({ peerId }) => {
-  closePeer(incomingPeers, peerId);
-  clearStreamFromTile(peerId);
-});
+socket.on("webrtc-description", async ({ from, description }) => {
+  const item = ensurePeer(from);
+  const pc = item.pc;
 
-socket.on("stream-requested", async ({ requesterId }) => {
-  if (localStream && requesterId !== myId) await offerStreamTo(requesterId);
-});
+  try {
+    const offerCollision = description.type === "offer" && (item.makingOffer || pc.signalingState !== "stable");
+    item.ignoreOffer = !item.polite && offerCollision;
+    if (item.ignoreOffer) return;
 
-socket.on("webrtc-offer", async ({ from, description }) => {
-  const pc = createIncomingPeer(from);
-  await pc.setRemoteDescription(description);
-  await flushPendingIce(from, pc);
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  socket.emit("webrtc-answer", { to: from, description: pc.localDescription });
-});
+    if (offerCollision) {
+      await Promise.all([
+        pc.setLocalDescription({ type: "rollback" }),
+        pc.setRemoteDescription(description)
+      ]);
+    } else {
+      await pc.setRemoteDescription(description);
+    }
 
-socket.on("webrtc-answer", async ({ from, description }) => {
-  const pc = outgoingPeers.get(from);
-  if (!pc) return;
-  await pc.setRemoteDescription(description);
-  await flushPendingIce(from, pc);
+    if (description.type === "offer") {
+      if (localStream) addLocalTracks(from);
+      await pc.setLocalDescription();
+      socket.emit("webrtc-description", { to: from, description: pc.localDescription });
+    }
+  } catch (err) {
+    console.warn("description failed", err);
+    setDebug(from, { peer: "description-error" });
+  }
 });
 
 socket.on("webrtc-ice", async ({ from, candidate }) => {
-  const pc = incomingPeers.get(from) || outgoingPeers.get(from);
-  if (!pc || !pc.remoteDescription) return addPendingIce(from, candidate);
-  try { await pc.addIceCandidate(candidate); } catch (e) { console.warn("ICE failed", e); }
+  const item = ensurePeer(from);
+  try {
+    await item.pc.addIceCandidate(candidate);
+  } catch (err) {
+    if (!item.ignoreOffer) console.warn("ICE failed", err);
+  }
 });
 
 socket.on("peer-left", ({ peerId }) => {
-  closePeer(incomingPeers, peerId);
-  closePeer(outgoingPeers, peerId);
+  const item = peers.get(peerId);
+  if (item) item.pc.close();
+  peers.delete(peerId);
   players.delete(peerId);
   clearStreamFromTile(peerId);
   rebuildTiles();
