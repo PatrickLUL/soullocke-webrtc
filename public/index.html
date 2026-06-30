@@ -8,33 +8,29 @@
 </head>
 <body>
   <header class="topbar">
-    <div>
+    <div class="brand">
       <h1>Soullocke Private Game View</h1>
       <p>Private Spielansicht für bis zu 4 Spieler</p>
     </div>
-
     <div class="controls">
-      <input id="roomInput" placeholder="Raumcode" />
-      <input id="nameInput" placeholder="Dein Name" />
+      <input id="roomInput" placeholder="Raumcode" autocomplete="off" />
+      <input id="nameInput" placeholder="Dein Name" autocomplete="off" />
       <button id="joinBtn">Raum beitreten</button>
       <button id="shareBtn" disabled>Spiel freigeben</button>
+      <button id="stopBtn" disabled>Stoppen</button>
     </div>
   </header>
-
   <div id="status" class="status">Noch nicht verbunden.</div>
-
   <main id="grid" class="grid"></main>
-
   <template id="tileTemplate">
     <section class="tile">
-      <div class="label">Leer</div>
+      <div class="label"><span class="dot"></span><span class="name">Leer</span></div>
+      <button class="fullscreenBtn" title="Groß anzeigen">⛶</button>
       <video autoplay playsinline></video>
       <div class="empty">Warte auf Spieler...</div>
     </section>
   </template>
-
   <script src="/socket.io/socket.io.js"></script>
-  <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

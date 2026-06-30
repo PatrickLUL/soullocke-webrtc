@@ -1,6 +1,6 @@
-# Soullocke Private Game View
+# Soullocke WebRTC Stable
 
-Private 4-Spieler-Spielübertragung mit Socket.io als Signaling und WebRTC für die Videos.
+Stabilere 4-Spieler-Version für private Spielübertragung.
 
 ## Lokal testen
 
@@ -9,37 +9,29 @@ npm install
 npm start
 ```
 
-Dann öffnen:
+Dann:
 
 ```text
-http://localhost:3000
+http://localhost:3000/room/Raum1
 ```
 
-Oder direkt:
+## Render
+
+Build Command:
 
 ```text
-http://localhost:3000/room/test1
+npm install
 ```
 
-## Mit Freunden benutzen
+Start Command:
 
-Du musst das Projekt öffentlich hosten, z.B. auf Render, Railway, Fly.io oder deinem eigenen VPS.
+```text
+npm start
+```
 
-Wichtig: Screen Share funktioniert außerhalb von localhost nur mit HTTPS.
+Nach dem Push zu GitHub macht Render automatisch ein neues Deploy.
 
-## Ablauf
+## Wichtig
 
-1. Host öffnet `/room/test1`.
-2. Host gibt Namen ein und klickt `Raum beitreten`.
-3. Host kopiert den Link und sendet ihn an Freunde.
-4. Jeder tritt bei.
-5. Jeder klickt `Spiel freigeben` und wählt Emulator/Spielfenster.
-6. Discord kann weiter nur für Voice benutzt werden.
-
-## Hinweise
-
-- Maximal 4 Spieler.
-- Der Server überträgt keine Videodaten.
-- Der Server macht nur Signaling.
-- Videos laufen per WebRTC Peer-to-Peer.
-- Für Pokémon reichen 480p/20 FPS meistens völlig aus.
+Ohne TURN-Server funktioniert WebRTC bei den meisten Heimnetzwerken, aber nicht bei allen.
+Falls ein Freund trotz HTTPS keine Streams sieht, brauchen wir später noch TURN.

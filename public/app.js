@@ -1,165 +1,222 @@
+
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
 const nameInput = document.querySelector("#nameInput");
 const joinBtn = document.querySelector("#joinBtn");
 const shareBtn = document.querySelector("#shareBtn");
+const stopBtn = document.querySelector("#stopBtn");
 const statusEl = document.querySelector("#status");
 const grid = document.querySelector("#grid");
 const tileTemplate = document.querySelector("#tileTemplate");
 
-let roomId = "";
 let myId = "";
+let roomId = "";
 let myName = "";
 let localStream = null;
+let joined = false;
 
 const players = new Map();
-const peers = new Map();
 const tiles = new Map();
+const outgoingPeers = new Map();
+const incomingPeers = new Map();
+const pendingIce = new Map();
 
-function setStatus(text) {
-  statusEl.textContent = text;
-}
+const iceConfig = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:global.stun.twilio.com:3478" }
+  ]
+};
+
+function setStatus(text) { statusEl.textContent = text; }
 
 function getRoomFromUrl() {
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  if (parts[0] === "room" && parts[1]) return parts[1];
-  return "";
+  const parts = location.pathname.split("/").filter(Boolean);
+  return parts[0] === "room" && parts[1] ? decodeURIComponent(parts[1]) : "";
 }
 
-function randomRoomCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
-}
+function randomRoomCode() { return Math.random().toString(36).slice(2, 8).toUpperCase(); }
 
-function createTile(playerId, labelText) {
-  if (tiles.has(playerId)) return tiles.get(playerId);
-
-  const node = tileTemplate.content.cloneNode(true);
-  const tile = node.querySelector(".tile");
-  const label = node.querySelector(".label");
-  const video = node.querySelector("video");
-
-  label.textContent = labelText;
+function createTile(id, labelText, connected = false) {
+  const clone = tileTemplate.content.cloneNode(true);
+  const tile = clone.querySelector(".tile");
+  const name = clone.querySelector(".name");
+  const video = clone.querySelector("video");
+  const fullscreenBtn = clone.querySelector(".fullscreenBtn");
+  tile.dataset.id = id;
+  name.textContent = labelText;
+  if (connected) tile.classList.add("connected");
+  fullscreenBtn.addEventListener("click", () => toggleFocus(tile));
+  video.addEventListener("dblclick", () => toggleFocus(tile));
   grid.appendChild(tile);
-
-  const tileData = { tile, label, video };
-  tiles.set(playerId, tileData);
-  return tileData;
+  tiles.set(id, { tile, name, video });
+  return tiles.get(id);
 }
 
-function ensureFourTiles() {
-  while (grid.children.length < 4) {
-    const id = "empty-" + grid.children.length;
-    createTile(id, "Leer");
-  }
+function toggleFocus(tile) {
+  const isFocused = tile.classList.contains("focused");
+  document.body.classList.toggle("focus", !isFocused);
+  for (const t of document.querySelectorAll(".tile")) t.classList.remove("focused");
+  if (!isFocused) tile.classList.add("focused");
 }
 
-function setVideo(playerId, stream) {
-  const player = players.get(playerId);
-  const name = playerId === myId ? `${myName} (ich)` : (player?.name || "Mitspieler");
-  const { tile, label, video } = createTile(playerId, name);
-  label.textContent = name;
-  video.srcObject = stream;
-  tile.classList.add("has-video");
-}
-
-function clearPlayer(playerId) {
-  const data = tiles.get(playerId);
-  if (data) {
-    data.video.srcObject = null;
-    data.tile.remove();
-    tiles.delete(playerId);
+function rebuildTiles() {
+  const streams = new Map();
+  for (const [id, data] of tiles) {
+    if (data.video.srcObject) streams.set(id, data.video.srcObject);
   }
 
-  const peer = peers.get(playerId);
-  if (peer) {
-    peer.destroy();
-    peers.delete(playerId);
-  }
-
-  players.delete(playerId);
-  renderTiles();
-}
-
-function renderTiles() {
-  grid.innerHTML = "";
   tiles.clear();
+  grid.innerHTML = "";
 
-  const orderedPlayers = [...players.values()].sort((a, b) => a.joinedAt - b.joinedAt);
-
-  for (const player of orderedPlayers) {
+  const ordered = [...players.values()].sort((a, b) => a.joinedAt - b.joinedAt);
+  for (const player of ordered) {
     const label = player.id === myId ? `${player.name} (ich)` : player.name;
-    createTile(player.id, label);
+    createTile(player.id, label, true);
   }
 
-  ensureFourTiles();
+  while (grid.children.length < 4) createTile(`empty-${grid.children.length}`, "Leer", false);
 
-  if (localStream) setVideo(myId, localStream);
+  for (const [id, stream] of streams) attachStreamToTile(id, stream);
+  if (localStream) attachStreamToTile(myId, localStream);
 }
 
-async function startShare() {
+function attachStreamToTile(playerId, stream) {
+  let data = tiles.get(playerId);
+  if (!data) {
+    const p = players.get(playerId);
+    data = createTile(playerId, p?.name || "Mitspieler", true);
+  }
+  data.video.srcObject = stream;
+  data.tile.classList.add("has-video", "connected");
+}
+
+function clearStreamFromTile(playerId) {
+  const data = tiles.get(playerId);
+  if (!data) return;
+  data.video.srcObject = null;
+  data.tile.classList.remove("has-video");
+}
+
+function closePeer(map, peerId) {
+  const pc = map.get(peerId);
+  if (pc) pc.close();
+  map.delete(peerId);
+}
+
+function addPendingIce(peerId, candidate) {
+  if (!pendingIce.has(peerId)) pendingIce.set(peerId, []);
+  pendingIce.get(peerId).push(candidate);
+}
+
+async function flushPendingIce(peerId, pc) {
+  const list = pendingIce.get(peerId) || [];
+  pendingIce.delete(peerId);
+  for (const c of list) {
+    try { await pc.addIceCandidate(c); } catch (e) { console.warn("queued ICE failed", e); }
+  }
+}
+
+function createOutgoingPeer(viewerId) {
+  closePeer(outgoingPeers, viewerId);
+  const pc = new RTCPeerConnection(iceConfig);
+  outgoingPeers.set(viewerId, pc);
+
+  for (const track of localStream.getTracks()) pc.addTrack(track, localStream);
+
+  pc.onicecandidate = e => {
+    if (e.candidate) socket.emit("webrtc-ice", { to: viewerId, candidate: e.candidate });
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (["failed", "closed"].includes(pc.connectionState)) closePeer(outgoingPeers, viewerId);
+  };
+
+  return pc;
+}
+
+function createIncomingPeer(streamerId) {
+  closePeer(incomingPeers, streamerId);
+  const pc = new RTCPeerConnection(iceConfig);
+  incomingPeers.set(streamerId, pc);
+
+  pc.ontrack = e => {
+    const stream = e.streams[0];
+    if (stream) attachStreamToTile(streamerId, stream);
+  };
+
+  pc.onicecandidate = e => {
+    if (e.candidate) socket.emit("webrtc-ice", { to: streamerId, candidate: e.candidate });
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === "connected") {
+      const p = players.get(streamerId);
+      setStatus(`Verbunden mit ${p?.name || "Mitspieler"}.`);
+    }
+    if (["failed", "closed"].includes(pc.connectionState)) {
+      closePeer(incomingPeers, streamerId);
+      clearStreamFromTile(streamerId);
+    }
+  };
+
+  return pc;
+}
+
+async function offerStreamTo(viewerId) {
+  if (!localStream || viewerId === myId) return;
+  const pc = createOutgoingPeer(viewerId);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socket.emit("webrtc-offer", { to: viewerId, description: pc.localDescription });
+}
+
+function requestExistingStreams() {
+  for (const p of players.values()) {
+    if (p.id !== myId && p.isSharing) socket.emit("request-stream", { fromPeerId: p.id });
+  }
+}
+
+async function startSharing() {
   localStream = await navigator.mediaDevices.getDisplayMedia({
-    video: {
-      width: { ideal: 854 },
-      height: { ideal: 480 },
-      frameRate: { ideal: 20, max: 30 }
-    },
+    video: { width: { ideal: 854 }, height: { ideal: 480 }, frameRate: { ideal: 20, max: 30 } },
     audio: false
   });
 
-  setVideo(myId, localStream);
-  socket.emit("stream-started");
+  attachStreamToTile(myId, localStream);
+  shareBtn.disabled = true;
+  stopBtn.disabled = false;
 
-  for (const player of players.values()) {
-    if (player.id !== myId) createPeer(player.id, true);
+  socket.emit("start-sharing");
+
+  for (const p of players.values()) {
+    if (p.id !== myId) await offerStreamTo(p.id);
   }
 
-  localStream.getVideoTracks()[0].addEventListener("ended", () => {
-    setStatus("Bildschirmfreigabe beendet.");
-  });
+  localStream.getVideoTracks()[0].addEventListener("ended", stopSharing);
+  setStatus("Spiel wird geteilt.");
 }
 
-function createPeer(peerId, initiator) {
-  if (peerId === myId) return null;
-  if (peers.has(peerId)) return peers.get(peerId);
-
-  const peer = new SimplePeer({
-    initiator,
-    trickle: true,
-    stream: localStream || undefined,
-    config: {
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:global.stun.twilio.com:3478" }
-      ]
-    }
-  });
-
-  peer.on("signal", signal => {
-    socket.emit("signal", { to: peerId, signal });
-  });
-
-  peer.on("stream", stream => {
-    setVideo(peerId, stream);
-  });
-
-  peer.on("close", () => {
-    peers.delete(peerId);
-  });
-
-  peer.on("error", err => {
-    console.warn("Peer error", peerId, err.message);
-  });
-
-  peers.set(peerId, peer);
-  return peer;
+function stopSharing() {
+  if (!localStream) return;
+  for (const track of localStream.getTracks()) track.stop();
+  localStream = null;
+  for (const id of outgoingPeers.keys()) closePeer(outgoingPeers, id);
+  clearStreamFromTile(myId);
+  shareBtn.disabled = !joined;
+  stopBtn.disabled = true;
+  socket.emit("stop-sharing");
+  setStatus("Stream gestoppt.");
 }
 
 joinBtn.addEventListener("click", () => {
   roomId = roomInput.value.trim() || randomRoomCode();
   myName = nameInput.value.trim() || "Spieler";
+  localStorage.setItem("soullockeName", myName);
 
-  if (!window.location.pathname.startsWith("/room/")) {
+  if (!location.pathname.startsWith("/room/")) {
     history.replaceState(null, "", `/room/${encodeURIComponent(roomId)}`);
   }
 
@@ -167,69 +224,84 @@ joinBtn.addEventListener("click", () => {
 });
 
 shareBtn.addEventListener("click", async () => {
-  try {
-    await startShare();
-    setStatus("Spiel wird geteilt. Deine Freunde sehen dich, sobald sie im Raum sind.");
-  } catch (error) {
-    console.error(error);
-    setStatus("Bildschirmfreigabe abgebrochen.");
-  }
+  try { await startSharing(); }
+  catch (e) { console.error(e); setStatus("Bildschirmfreigabe abgebrochen oder blockiert."); }
 });
 
-socket.on("room-joined", data => {
+stopBtn.addEventListener("click", stopSharing);
+
+socket.on("joined", data => {
+  joined = true;
   myId = data.myId;
+  roomId = data.roomId;
   players.clear();
-
-  for (const player of data.players) {
-    players.set(player.id, player);
-  }
-
-  renderTiles();
+  for (const p of data.players) players.set(p.id, p);
 
   joinBtn.disabled = true;
   shareBtn.disabled = false;
+  rebuildTiles();
 
-  const shareUrl = `${window.location.origin}/room/${encodeURIComponent(roomId)}`;
-  setStatus(`Verbunden. Link für Freunde: ${shareUrl}`);
+  setStatus(`Verbunden. Link für Freunde: ${location.origin}/room/${encodeURIComponent(roomId)}`);
+  requestExistingStreams();
 });
 
-socket.on("room-full", () => {
-  setStatus("Der Raum ist voll. Maximal 4 Spieler.");
+socket.on("join-error", setStatus);
+
+socket.on("players", list => {
+  players.clear();
+  for (const p of list) players.set(p.id, p);
+  rebuildTiles();
+  requestExistingStreams();
 });
 
-socket.on("player-joined", player => {
-  players.set(player.id, player);
-  renderTiles();
-
-  if (localStream) createPeer(player.id, true);
+socket.on("peer-started-sharing", ({ peerId }) => {
+  if (peerId !== myId) socket.emit("request-stream", { fromPeerId: peerId });
 });
 
-socket.on("player-left", ({ id }) => {
-  clearPlayer(id);
-  setStatus("Ein Spieler hat den Raum verlassen.");
+socket.on("peer-stopped-sharing", ({ peerId }) => {
+  closePeer(incomingPeers, peerId);
+  clearStreamFromTile(peerId);
 });
 
-socket.on("player-stream-started", ({ id }) => {
-  if (id !== myId) createPeer(id, false);
+socket.on("stream-requested", async ({ requesterId }) => {
+  if (localStream && requesterId !== myId) await offerStreamTo(requesterId);
 });
 
-socket.on("signal", ({ from, signal }) => {
-  if (!players.has(from)) {
-    players.set(from, { id: from, name: "Mitspieler", joinedAt: Date.now() });
-    renderTiles();
-  }
+socket.on("webrtc-offer", async ({ from, description }) => {
+  const pc = createIncomingPeer(from);
+  await pc.setRemoteDescription(description);
+  await flushPendingIce(from, pc);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  socket.emit("webrtc-answer", { to: from, description: pc.localDescription });
+});
 
-  const peer = createPeer(from, false);
-  peer.signal(signal);
+socket.on("webrtc-answer", async ({ from, description }) => {
+  const pc = outgoingPeers.get(from);
+  if (!pc) return;
+  await pc.setRemoteDescription(description);
+  await flushPendingIce(from, pc);
+});
+
+socket.on("webrtc-ice", async ({ from, candidate }) => {
+  const pc = incomingPeers.get(from) || outgoingPeers.get(from);
+  if (!pc || !pc.remoteDescription) return addPendingIce(from, candidate);
+  try { await pc.addIceCandidate(candidate); } catch (e) { console.warn("ICE failed", e); }
+});
+
+socket.on("peer-left", ({ peerId }) => {
+  closePeer(incomingPeers, peerId);
+  closePeer(outgoingPeers, peerId);
+  players.delete(peerId);
+  rebuildTiles();
+});
+
+window.addEventListener("beforeunload", () => {
+  for (const id of outgoingPeers.keys()) closePeer(outgoingPeers, id);
+  for (const id of incomingPeers.keys()) closePeer(incomingPeers, id);
 });
 
 const roomFromUrl = getRoomFromUrl();
-if (roomFromUrl) {
-  roomInput.value = roomFromUrl;
-}
+if (roomFromUrl) roomInput.value = roomFromUrl;
 nameInput.value = localStorage.getItem("soullockeName") || "";
-nameInput.addEventListener("input", () => {
-  localStorage.setItem("soullockeName", nameInput.value);
-});
-
-ensureFourTiles();
+rebuildTiles();
