@@ -38,21 +38,28 @@ body.focus .topbar, body.focus .status { display: none; }
 .spriteTeamBar {
   position: absolute;
   z-index: 6;
-  top: 48px;
+  top: 44px;
   left: 14px;
   display: flex;
-  gap: 7px;
-  padding: 6px 8px;
+  gap: 4px;
+  padding: 4px 6px;
   border-radius: 999px;
-  background: rgba(0,0,0,.58);
-  border: 1px solid rgba(255,255,255,.18);
-  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,.32);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(4px);
+  transition: background .15s ease, opacity .15s ease;
+  opacity: .8;
+}
+
+.spriteTeamBar:hover {
+  background: rgba(0,0,0,.62);
+  opacity: 1;
 }
 
 .spriteSlot {
-  width: 46px;
-  height: 46px;
-  border-radius: 11px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   display: grid;
   place-items: center;
   background: rgba(255,255,255,.08);
@@ -67,8 +74,8 @@ body.focus .topbar, body.focus .status { display: none; }
 }
 
 .spriteSlot img {
-  width: 40px;
-  height: 40px;
+  width: 22px;
+  height: 22px;
   image-rendering: pixelated;
   object-fit: contain;
 }
@@ -98,9 +105,9 @@ body.focus .topbar, body.focus .status { display: none; }
 .spriteSlot.dead::after {
   content: "☠";
   position: absolute;
-  right: -5px;
-  bottom: -5px;
-  font-size: 14px;
+  right: -4px;
+  bottom: -4px;
+  font-size: 10px;
   text-shadow: 0 1px 3px #000;
 }
 
@@ -112,20 +119,21 @@ body.focus .topbar, body.focus .status { display: none; }
 .spriteSlot.box::after {
   content: "📦";
   position: absolute;
-  right: -7px;
-  bottom: -7px;
-  font-size: 13px;
+  right: -5px;
+  bottom: -5px;
+  font-size: 9px;
   text-shadow: 0 1px 3px #000;
 }
 
 .spriteEditButton {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   padding: 0;
   background: rgba(155,80,255,.85);
   color: white;
   border: 1px solid rgba(255,255,255,.22);
+  font-size: 11px;
 }
 
 .spriteEditor {
@@ -206,20 +214,20 @@ body.editor-open .grid {
 
 @media (max-width: 900px) {
   .spriteTeamBar {
-    top: 46px;
+    top: 42px;
     left: 10px;
-    gap: 5px;
+    gap: 3px;
   }
 
   .spriteSlot,
   .spriteEditButton {
-    width: 30px;
-    height: 30px;
+    width: 22px;
+    height: 22px;
   }
 
   .spriteSlot img {
-    width: 26px;
-    height: 26px;
+    width: 18px;
+    height: 18px;
   }
 }
 

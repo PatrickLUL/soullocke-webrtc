@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.5-sprites";
+const APP_VERSION = "v8.6-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
