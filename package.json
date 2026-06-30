@@ -1,6 +1,6 @@
 {
-  "name": "soullocke-webrtc-v6-performance",
-  "version": "1.0.5",
+  "name": "soullocke-webrtc-v6-1-performance",
+  "version": "1.0.6",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

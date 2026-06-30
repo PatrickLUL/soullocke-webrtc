@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v6-performance";
+const APP_VERSION = "v6.1-performance";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -85,7 +85,7 @@ function renderDebug(id) {
     `packetsLost: ${s.packetsLost ?? "-"}`,
     `framesDropped: ${s.framesDropped ?? "-"}`,
     `quality: ${s.quality || "-"}`
-  ].join("\\n");
+  ].join("\n");
 }
 
 function getRoomFromUrl() {
