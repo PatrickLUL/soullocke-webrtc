@@ -15,11 +15,11 @@ const rooms = new Map();
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/room/:roomId", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-function defaultTeam() {
-  return Array.from({ length: 6 }, () => ({
-    pokemon: "",
-    status: "alive"
-  }));
+function defaultRoster() {
+  return {
+    team: Array.from({ length: 6 }, () => ({ pokemon: "" })),
+    graveyard: []
+  };
 }
 
 function getRoom(roomId) {
@@ -66,7 +66,7 @@ io.on("connection", socket => {
     socket.join(roomId);
     socket.data.roomId = roomId;
     room.players.set(socket.id, { id: socket.id, name, joinedAt: Date.now(), isSharing: false });
-    if (!room.teams[socket.id]) room.teams[socket.id] = defaultTeam();
+    if (!room.teams[socket.id]) room.teams[socket.id] = defaultRoster();
     if (typeof room.badges[socket.id] !== "number") room.badges[socket.id] = 0;
 
     socket.emit("joined", {
@@ -99,20 +99,25 @@ io.on("connection", socket => {
     socket.to(roomId).emit("peer-stopped-sharing", { peerId: socket.id });
   });
 
-  socket.on("update-team", ({ team }) => {
+  socket.on("update-team", ({ team, graveyard }) => {
     const roomId = socket.data.roomId;
     if (!roomId) return;
 
     const room = getRoom(roomId);
     const safeTeam = Array.from({ length: 6 }, (_, i) => {
       const item = Array.isArray(team) ? (team[i] || {}) : {};
-      return {
-        pokemon: String(item.pokemon || "").trim().toLowerCase().slice(0, 32),
-        status: ["alive", "dead", "box"].includes(item.status) ? item.status : "alive"
-      };
+      return { pokemon: String(item.pokemon || "").trim().toLowerCase().slice(0, 32) };
     });
 
-    room.teams[socket.id] = safeTeam;
+    const safeGraveyard = (Array.isArray(graveyard) ? graveyard : [])
+      .slice(0, 200)
+      .map(item => ({
+        pokemon: String((item && item.pokemon) || "").trim().toLowerCase().slice(0, 32),
+        status: (item && item.status) === "box" ? "box" : "dead"
+      }))
+      .filter(item => item.pokemon);
+
+    room.teams[socket.id] = { team: safeTeam, graveyard: safeGraveyard };
     broadcastTeams(roomId);
   });
 

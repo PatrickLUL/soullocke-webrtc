@@ -83,12 +83,21 @@ body.spotlight .tile:not(.spotlightMain):hover {
   position: static;
   z-index: auto;
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+  flex-direction: column;
+  gap: 6px;
   padding: 6px 10px;
   background: #0d0d16;
   border-bottom: 1px solid rgba(255,255,255,.14);
 }
+
+.spriteRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.graveyardRow.hidden { display: none; }
 
 .spriteSlot {
   width: 34px;
@@ -141,34 +150,60 @@ body.spotlight .tile:not(.spotlightMain):hover {
   opacity: .5;
 }
 
-.spriteSlot.dead {
+/* Friedhof & Box: Slots hier sind grundsätzlich kleiner/gedeckter, da nicht
+   das aktive Team, sondern historische Einträge ohne Slot-Limit. */
+.graveSlot {
+  width: 28px;
+  height: 28px;
+}
+
+.graveSlot img { width: 22px; height: 22px; }
+
+.graveSlot.dead {
   filter: grayscale(1);
   opacity: .55;
   border-color: rgba(255,70,70,.55);
 }
 
-.spriteSlot.dead::after {
+.graveSlot.dead::after {
   content: "☠";
   position: absolute;
   right: -5px;
   bottom: -5px;
-  font-size: 13px;
-  text-shadow: 0 1px 3px #000;
-}
-
-.spriteSlot.box {
-  opacity: .7;
-  border-color: rgba(255,200,60,.55);
-}
-
-.spriteSlot.box::after {
-  content: "📦";
-  position: absolute;
-  right: -7px;
-  bottom: -7px;
   font-size: 12px;
   text-shadow: 0 1px 3px #000;
 }
+
+.graveSlot.box {
+  opacity: .75;
+  border-color: rgba(255,200,60,.55);
+}
+
+.graveSlot.box::after {
+  content: "📦";
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  font-size: 11px;
+  text-shadow: 0 1px 3px #000;
+}
+
+.graveyardToggle {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,.6);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 0;
+}
+
+.graveyardToggle:hover { color: rgba(255,255,255,.9); }
+.toggleArrow { font-size: 8px; display: inline-block; }
+.graveyardCount { color: rgba(255,255,255,.4); font-weight: 400; margin-left: 2px; }
 
 .levelCapBadge {
   display: flex;
@@ -234,6 +269,28 @@ body.spotlight .tile:not(.spotlightMain):hover {
 
 .slotPopoverClear { background: #333342; color: white; }
 .slotPopoverSave { background: #21a957; color: white; }
+
+.slotPopoverMoveActions {
+  display: grid;
+  gap: 6px;
+}
+
+.slotPopoverMove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.06);
+  color: white;
+  border-radius: 8px;
+}
+
+.slotPopoverMove:hover { background: rgba(255,255,255,.14); }
+.slotPopoverMove.dead:hover { border-color: rgba(255,70,70,.6); }
+.slotPopoverMove.box:hover { border-color: rgba(255,200,60,.6); }
 
 @media (max-width: 900px) {
   .spriteTeamBar {

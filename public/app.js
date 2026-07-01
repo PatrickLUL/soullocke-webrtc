@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.11-sprites";
+const APP_VERSION = "v8.12-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -286,12 +286,27 @@ function toggleSpotlight() {
 }
 
 
-function emptyTeam() {
-  return Array.from({ length: 6 }, () => ({ pokemon: "", status: "alive" }));
+function emptyRoster() {
+  return { team: Array.from({ length: 6 }, () => ({ pokemon: "" })), graveyard: [] };
+}
+
+function getRoster(playerId) {
+  return teams.get(playerId) || emptyRoster();
 }
 
 function getTeam(playerId) {
-  return teams.get(playerId) || emptyTeam();
+  return getRoster(playerId).team;
+}
+
+function getGraveyard(playerId) {
+  return getRoster(playerId).graveyard;
+}
+
+function setMyRoster(nextTeam, nextGraveyard) {
+  const roster = { team: nextTeam, graveyard: nextGraveyard };
+  teams.set(myId, roster);
+  socket.emit("update-team", roster);
+  renderAllSpriteBars();
 }
 
 function getBadges(playerId) {
@@ -338,15 +353,18 @@ function renderSpriteBar(playerId) {
   const bar = data.tile.querySelector(".spriteTeamBar");
   if (!bar) return;
 
-  const team = getTeam(playerId);
+  const roster = getRoster(playerId);
   const editable = playerId === myId && joined;
 
   bar.innerHTML = "";
 
-  team.forEach((pokemon, index) => {
+  const teamRow = document.createElement("div");
+  teamRow.className = "spriteRow teamRow";
+
+  roster.team.forEach((pokemon, index) => {
     const slot = document.createElement("div");
-    slot.className = `spriteSlot ${pokemon.pokemon ? "" : "slotEmpty"} ${pokemon.status || "alive"} ${editable ? "editable" : ""}`;
-    slot.title = pokemon.pokemon ? `${pokemon.pokemon} (${pokemon.status || "alive"})` : (editable ? "Klicken, um ein Pokémon einzutragen" : "Leerer Slot");
+    slot.className = `spriteSlot ${pokemon.pokemon ? "" : "slotEmpty"} ${editable ? "editable" : ""}`;
+    slot.title = pokemon.pokemon ? `${pokemon.pokemon} (Team)` : (editable ? "Klicken, um ein Pokémon einzutragen" : "Leerer Slot");
 
     if (pokemon.pokemon) {
       const img = document.createElement("img");
@@ -365,8 +383,64 @@ function renderSpriteBar(playerId) {
         openSlotPopover(slot, index);
       });
     }
-    bar.appendChild(slot);
+    teamRow.appendChild(slot);
   });
+
+  bar.appendChild(teamRow);
+
+  const graveyard = roster.graveyard || [];
+  if (graveyard.length || editable) {
+    const graveToggle = document.createElement("button");
+    graveToggle.type = "button";
+    graveToggle.className = "graveyardToggle";
+    const deadCount = graveyard.filter(p => p.status === "dead").length;
+    const boxCount = graveyard.filter(p => p.status === "box").length;
+    graveToggle.innerHTML = `<span class="toggleArrow">▶</span> Friedhof &amp; Box <span class="graveyardCount">${deadCount} tot · ${boxCount} geboxt</span>`;
+
+    const graveRow = document.createElement("div");
+    graveRow.className = "spriteRow graveyardRow hidden";
+
+    graveyard.forEach((pokemon, gIndex) => {
+      const slot = document.createElement("div");
+      slot.className = `spriteSlot graveSlot ${pokemon.status}`;
+      slot.title = `${pokemon.pokemon} (${pokemon.status === "dead" ? "tot" : "geboxt"})`;
+
+      const img = document.createElement("img");
+      img.src = tinySpriteUrl(pokemon.pokemon);
+      img.alt = pokemon.pokemon;
+      img.onerror = () => { img.src = spriteUrl(pokemon.pokemon); };
+      slot.appendChild(img);
+
+      if (editable) {
+        slot.classList.add("editable");
+        slot.addEventListener("click", (event) => {
+          event.stopPropagation();
+          openGraveSlotPopover(slot, gIndex);
+        });
+      }
+      graveRow.appendChild(slot);
+    });
+
+    if (editable) {
+      const addSlot = document.createElement("div");
+      addSlot.className = "spriteSlot slotEmpty editable";
+      addSlot.title = "Pokémon zu Friedhof/Box hinzufügen";
+      addSlot.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openGraveSlotPopover(addSlot, -1);
+      });
+      graveRow.appendChild(addSlot);
+    }
+
+    graveToggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const nowHidden = graveRow.classList.toggle("hidden");
+      graveToggle.querySelector(".toggleArrow").textContent = nowHidden ? "▶" : "▼";
+    });
+
+    bar.appendChild(graveToggle);
+    bar.appendChild(graveRow);
+  }
 
   const badgeCount = getBadges(playerId);
   const cap = levelCapForBadges(currentGame, badgeCount);
@@ -432,23 +506,26 @@ function positionPopover(pop, anchorEl) {
 }
 
 function openSlotPopover(anchorEl, index) {
-  const alreadyOpenForThisSlot = document.querySelector(".slotPopover")?.dataset.index === String(index);
+  const alreadyOpenForThisSlot = document.querySelector(".slotPopover")?.dataset.kind === "team" &&
+    document.querySelector(".slotPopover")?.dataset.index === String(index);
   closeSlotPopover();
   if (alreadyOpenForThisSlot) return;
 
-  const team = getTeam(myId);
-  const current = team[index] || { pokemon: "", status: "alive" };
+  const roster = getRoster(myId);
+  const current = roster.team[index] || { pokemon: "" };
+  const hasPokemon = Boolean(current.pokemon);
 
   const pop = document.createElement("div");
   pop.className = "slotPopover";
+  pop.dataset.kind = "team";
   pop.dataset.index = String(index);
   pop.innerHTML = `
     <input class="slotPopoverInput" type="text" placeholder="z.B. glumanda" list="pokemonSuggestions" autocomplete="off" />
-    <select class="slotPopoverStatus">
-      <option value="alive">Lebendig</option>
-      <option value="dead">Tot</option>
-      <option value="box">Box</option>
-    </select>
+    ${hasPokemon ? `
+    <div class="slotPopoverMoveActions">
+      <button type="button" class="slotPopoverMove dead">☠ Als tot markieren</button>
+      <button type="button" class="slotPopoverMove box">📦 In Box verschieben</button>
+    </div>` : ""}
     <div class="slotPopoverActions">
       <button type="button" class="slotPopoverClear">Leeren</button>
       <button type="button" class="slotPopoverSave">✓ Speichern</button>
@@ -456,30 +533,102 @@ function openSlotPopover(anchorEl, index) {
   `;
 
   const input = pop.querySelector(".slotPopoverInput");
-  const status = pop.querySelector(".slotPopoverStatus");
   input.value = current.pokemon || "";
-  status.value = current.status || "alive";
 
   function save() {
-    const next = getTeam(myId).slice();
-    next[index] = { pokemon: normalizePokemonName(input.value), status: status.value };
-    teams.set(myId, next);
-    socket.emit("update-team", { team: next });
-    renderAllSpriteBars();
+    const nextTeam = getTeam(myId).slice();
+    nextTeam[index] = { pokemon: normalizePokemonName(input.value) };
+    setMyRoster(nextTeam, getGraveyard(myId));
     closeSlotPopover();
   }
 
   function clearSlot() {
-    const next = getTeam(myId).slice();
-    next[index] = { pokemon: "", status: "alive" };
-    teams.set(myId, next);
-    socket.emit("update-team", { team: next });
-    renderAllSpriteBars();
+    const nextTeam = getTeam(myId).slice();
+    nextTeam[index] = { pokemon: "" };
+    setMyRoster(nextTeam, getGraveyard(myId));
+    closeSlotPopover();
+  }
+
+  function moveToGraveyard(status) {
+    const name = normalizePokemonName(input.value) || current.pokemon;
+    if (!name) return closeSlotPopover();
+    const nextTeam = getTeam(myId).slice();
+    nextTeam[index] = { pokemon: "" };
+    const nextGraveyard = getGraveyard(myId).concat([{ pokemon: name, status }]);
+    setMyRoster(nextTeam, nextGraveyard);
     closeSlotPopover();
   }
 
   pop.querySelector(".slotPopoverSave").addEventListener("click", (e) => { e.stopPropagation(); save(); });
   pop.querySelector(".slotPopoverClear").addEventListener("click", (e) => { e.stopPropagation(); clearSlot(); });
+  const deadBtn = pop.querySelector(".slotPopoverMove.dead");
+  const boxBtn = pop.querySelector(".slotPopoverMove.box");
+  if (deadBtn) deadBtn.addEventListener("click", (e) => { e.stopPropagation(); moveToGraveyard("dead"); });
+  if (boxBtn) boxBtn.addEventListener("click", (e) => { e.stopPropagation(); moveToGraveyard("box"); });
+  pop.addEventListener("click", (e) => e.stopPropagation());
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); save(); }
+    if (e.key === "Escape") closeSlotPopover();
+  });
+
+  document.body.appendChild(pop);
+  positionPopover(pop, anchorEl);
+  input.focus();
+  input.select();
+}
+
+function openGraveSlotPopover(anchorEl, gIndex) {
+  const isAddSlot = gIndex === -1;
+  const alreadyOpen = document.querySelector(".slotPopover")?.dataset.kind === "grave" &&
+    document.querySelector(".slotPopover")?.dataset.index === String(gIndex);
+  closeSlotPopover();
+  if (alreadyOpen) return;
+
+  const graveyard = getGraveyard(myId);
+  const current = isAddSlot ? { pokemon: "", status: "dead" } : (graveyard[gIndex] || { pokemon: "", status: "dead" });
+
+  const pop = document.createElement("div");
+  pop.className = "slotPopover";
+  pop.dataset.kind = "grave";
+  pop.dataset.index = String(gIndex);
+  pop.innerHTML = `
+    <input class="slotPopoverInput" type="text" placeholder="z.B. reshiram" list="pokemonSuggestions" autocomplete="off" />
+    <select class="slotPopoverStatus">
+      <option value="dead">Tot</option>
+      <option value="box">Box</option>
+    </select>
+    <div class="slotPopoverActions">
+      <button type="button" class="slotPopoverClear">${isAddSlot ? "Abbrechen" : "Entfernen"}</button>
+      <button type="button" class="slotPopoverSave">✓ Speichern</button>
+    </div>
+  `;
+
+  const input = pop.querySelector(".slotPopoverInput");
+  const status = pop.querySelector(".slotPopoverStatus");
+  input.value = current.pokemon || "";
+  status.value = current.status || "dead";
+
+  function save() {
+    const name = normalizePokemonName(input.value);
+    if (!name) return closeSlotPopover();
+    const nextGraveyard = getGraveyard(myId).slice();
+    const entry = { pokemon: name, status: status.value };
+    if (isAddSlot) nextGraveyard.push(entry);
+    else nextGraveyard[gIndex] = entry;
+    setMyRoster(getTeam(myId), nextGraveyard);
+    closeSlotPopover();
+  }
+
+  function removeEntry() {
+    if (isAddSlot) return closeSlotPopover();
+    const nextGraveyard = getGraveyard(myId).slice();
+    nextGraveyard.splice(gIndex, 1);
+    setMyRoster(getTeam(myId), nextGraveyard);
+    closeSlotPopover();
+  }
+
+  pop.querySelector(".slotPopoverSave").addEventListener("click", (e) => { e.stopPropagation(); save(); });
+  pop.querySelector(".slotPopoverClear").addEventListener("click", (e) => { e.stopPropagation(); removeEntry(); });
   pop.addEventListener("click", (e) => e.stopPropagation());
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); save(); }
@@ -865,10 +1014,8 @@ settingsBtn.addEventListener("click", (event) => {
 
 clearTeamBtn.addEventListener("click", () => {
   if (!joined) return;
-  const next = emptyTeam();
-  teams.set(myId, next);
-  socket.emit("update-team", { team: next });
-  renderAllSpriteBars();
+  if (!confirm("Team UND Friedhof/Box komplett leeren?")) return;
+  setMyRoster(emptyRoster().team, []);
   settingsPanel.classList.add("hidden");
 });
 
@@ -887,15 +1034,10 @@ function buildTeamExport() {
     gameLabel: getGame(currentGame).label,
     exportedAt: new Date().toISOString(),
     players: ordered.map(p => {
-      const team = getTeam(p.id);
-      const alive = [];
-      const dead = [];
-      const boxed = [];
-      team.forEach(slot => {
-        if (!slot.pokemon) return;
-        const target = slot.status === "dead" ? dead : slot.status === "box" ? boxed : alive;
-        target.push(slot.pokemon);
-      });
+      const roster = getRoster(p.id);
+      const alive = roster.team.filter(s => s.pokemon).map(s => s.pokemon);
+      const dead = roster.graveyard.filter(s => s.status === "dead").map(s => s.pokemon);
+      const boxed = roster.graveyard.filter(s => s.status === "box").map(s => s.pokemon);
       const badgeCount = getBadges(p.id);
       return {
         name: p.name,
@@ -954,7 +1096,7 @@ socket.on("joined", data => {
   players.clear();
   for (const p of data.players) players.set(p.id, p);
   teams.clear();
-  if (data.teams) for (const [id, team] of Object.entries(data.teams)) teams.set(id, team);
+  if (data.teams) for (const [id, roster] of Object.entries(data.teams)) teams.set(id, roster);
   badges.clear();
   if (data.badges) for (const [id, count] of Object.entries(data.badges)) badges.set(id, count);
   currentGame = data.game || "hgss";
@@ -981,7 +1123,7 @@ socket.on("players", list => {
 
 socket.on("teams", data => {
   teams.clear();
-  if (data) for (const [id, team] of Object.entries(data)) teams.set(id, team);
+  if (data) for (const [id, roster] of Object.entries(data)) teams.set(id, roster);
   renderAllSpriteBars();
 });
 

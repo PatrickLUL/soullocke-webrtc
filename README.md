@@ -4,7 +4,7 @@ Private Browser-Spielansicht für bis zu 4 Spieler – gedacht für gemeinsame
 Pokémon SoulLink-/Nuzlocke-Runs per Bildschirmfreigabe (WebRTC) mit
 geteiltem Team-Tracking, Orden/Level-Cap und Karte.
 
-**Aktuelle Version:** v8.11-sprites
+**Aktuelle Version:** v8.12-sprites
 
 ## Features
 
@@ -13,10 +13,17 @@ geteiltem Team-Tracking, Orden/Level-Cap und Karte.
 - **2×2-Raster** für bis zu 4 Spieler, Vollbild-Ansicht pro Kachel, sowie ein
   **Spotlight-Modus** (ein Stream groß, die anderen 3 klein als anklickbare
   Vorschau-Reihe – Klick auf eine Vorschau macht sie zum Haupt-Stream).
-- **Team-Tracking pro Spieler:** 6 Slots mit Pokémon-Sprite (PokéAPI, Fallback
-  auf pokemondb.net), Status `alive` / `dead` / `box`, deutsche Namen per
-  Autocomplete (Gen 1). Klick auf einen Slot öffnet ein kleines Popup direkt
-  daneben (Name-Eingabe + Status), keine separate Sidebar mehr.
+- **Team-Tracking pro Spieler, getrennt in zwei Bereiche:**
+  - **Team** – 6 feste Slots, immer lebendig (kein Status-Feld nötig). Klick
+    auf einen Slot öffnet ein Popup zur Eingabe; bei belegtem Slot zusätzlich
+    "Als tot markieren" / "In Box verschieben" (verschiebt automatisch in
+    den Friedhof-Bereich, Team-Slot bleibt danach leer zum manuellen Neu-
+    Befüllen).
+  - **Friedhof & Box** – ein einklappbarer Bereich ohne Slot-Limit für tote
+    (☠, Graustufen) und geboxte (📦) Pokémon. Eigener `+`-Slot, um direkt
+    ein Pokémon dort einzutragen.
+  - Sprites via PokéAPI (Fallback auf pokemondb.net), deutsche Namen per
+    Autocomplete (Gen 1).
 - **Sprite-Leiste** sitzt als eigener Streifen oberhalb des Videos (kein
   Overlay mehr auf dem Stream).
 - **Schlanke Topbar:** nur Kernaktionen (Raum, Name, Beitreten, Freigeben,
@@ -74,6 +81,12 @@ neu deployed werden, damit neue Socket-Events greifen.
 
 ## Versionsverlauf
 
+- **v8.12** – **Datenmodell-Umbau:** Team (6 Slots) und Friedhof/Box (unbegrenzt)
+  sind jetzt getrennte Bereiche statt eines Status-Dropdowns pro Slot (ein
+  Team-Pokémon ist per Definition lebendig). Server-Roster-Format geändert
+  von `Array(6)` auf `{ team: Array(6), graveyard: Array }` – **Team-Daten
+  aus v8.11 und älter sind nicht kompatibel** und werden beim ersten Neustart
+  des Servers zurückgesetzt.
 - **v8.11** – **Bugfix:** leere Pokémon-Slots waren unklickbar, weil sie
   versehentlich die globale CSS-Klasse `.empty` (vom Video-Platzhalter,
   `pointer-events: none`) mitbenutzt haben – jetzt eigene Klasse `slotEmpty`.
