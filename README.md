@@ -1,18 +1,14 @@
-# Soullocke WebRTC v10.2-links-fix
+# Soullocke WebRTC v10.3-links-click-fix
 
 Fix:
-- Link-Zeilen werden jetzt korrekt aufgebaut.
-- Pokémon-Zellen sind wieder sichtbar und anklickbar.
-- Aktionen ↑ ↓ × bleiben rechts in der Aktionsspalte.
-- Das Pokémon-Auswahl-Popup bleibt über dem Modal.
-- Version oben: v10.2-links.
-
-Ursache:
-CSS `repeat(var(--player-count), ...)` war im Grid unzuverlässig. Die Spalten werden jetzt direkt per JavaScript gesetzt.
+- Pokémon-Zellen im Link-Tracker öffnen jetzt zuverlässig das Pokémon-Popup.
+- Zusätzlicher delegated click/pointerup Handler auf der Link-Tabelle.
+- Pokémon-Zellen sind nicht mehr grau/deaktiviert wirkend.
+- Version oben: v10.3-links.
 
 Deploy:
 ```bash
 git add .
-git commit -m "fix soullink tracker grid"
+git commit -m "fix link pokemon cell clicks"
 git push
 ```

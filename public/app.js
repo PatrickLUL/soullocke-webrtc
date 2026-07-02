@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v10.2-links";
+const APP_VERSION = "v10.3-links";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -1532,11 +1532,18 @@ function renderLinkTracker() {
       cell.type = "button";
       cell.className = `linkPokemonCell status-${entry.status || "empty"} ${entry.pokemon ? "" : "empty"}`;
       cell.title = entry.pokemon ? `${entry.pokemon} – ${getStatusLabel(entry.status)}` : "Pokémon auswählen";
+      cell.dataset.rowId = row.id;
+      cell.dataset.playerId = player.id;
       cell.innerHTML = renderLinkPokemonCell(entry);
-      cell.addEventListener("click", (event) => {
+
+      const openEditorFromCell = (event) => {
+        event.preventDefault();
         event.stopPropagation();
         openLinkPokemonEditor(cell, row.id, player.id);
-      });
+      };
+
+      cell.addEventListener("click", openEditorFromCell);
+      cell.addEventListener("pointerup", openEditorFromCell);
       line.appendChild(cell);
     });
 
@@ -1573,6 +1580,24 @@ function renderLinkTracker() {
 
   linkTable.innerHTML = "";
   linkTable.append(header, body);
+}
+
+if (linkTable) {
+  linkTable.addEventListener("click", (event) => {
+    const cell = event.target.closest?.(".linkPokemonCell");
+    if (!cell) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openLinkPokemonEditor(cell, cell.dataset.rowId, cell.dataset.playerId);
+  });
+
+  linkTable.addEventListener("pointerup", (event) => {
+    const cell = event.target.closest?.(".linkPokemonCell");
+    if (!cell) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openLinkPokemonEditor(cell, cell.dataset.rowId, cell.dataset.playerId);
+  });
 }
 
 function renderLinkPokemonCell(entry) {

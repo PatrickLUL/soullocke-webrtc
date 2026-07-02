@@ -1221,3 +1221,29 @@ body.spotlight .tile:not(.spotlightMain):hover {
 .linkPokemonEditor * {
   pointer-events: auto;
 }
+
+
+/* v10.3 click hardening */
+.linkPokemonCell,
+.linkPokemonCell * {
+  pointer-events: auto;
+}
+
+.linkPokemonCell {
+  cursor: pointer !important;
+  user-select: none;
+  opacity: 1 !important;
+}
+
+.linkPokemonCell.empty {
+  color: #222b3a !important;
+  background: #ffffff !important;
+}
+
+.linkPokemonPlaceholder {
+  color: #222b3a !important;
+}
+
+.linkPokemonEditor {
+  z-index: 99999 !important;
+}

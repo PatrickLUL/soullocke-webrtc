@@ -1,6 +1,6 @@
 {
-  "name": "soullocke-webrtc-v10-2-links-fix",
-  "version": "1.3.2",
+  "name": "soullocke-webrtc-v10-3-links-click-fix",
+  "version": "1.3.3",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
