@@ -4,7 +4,7 @@ Private Browser-Spielansicht für bis zu 4 Spieler – gedacht für gemeinsame
 Pokémon SoulLink-/Nuzlocke-Runs per Bildschirmfreigabe (WebRTC) mit
 geteiltem Team-Tracking, Orden/Level-Cap und Karte.
 
-**Aktuelle Version:** v8.12-sprites
+**Aktuelle Version:** v8.13-sprites
 
 ## Features
 
@@ -19,9 +19,10 @@ geteiltem Team-Tracking, Orden/Level-Cap und Karte.
     "Als tot markieren" / "In Box verschieben" (verschiebt automatisch in
     den Friedhof-Bereich, Team-Slot bleibt danach leer zum manuellen Neu-
     Befüllen).
-  - **Friedhof & Box** – ein einklappbarer Bereich ohne Slot-Limit für tote
-    (☠, Graustufen) und geboxte (📦) Pokémon. Eigener `+`-Slot, um direkt
-    ein Pokémon dort einzutragen.
+  - **Friedhof & Box** – kompakter Button direkt neben den Team-Slots
+    (☠ Anzahl · 📦 Anzahl), öffnet bei Klick ein Popup mit allen Einträgen.
+    Kein Slot-Limit, kein fester Platz in der Leiste (Popup darf auch kurz
+    über dem Stream liegen, da es nur zum Nachsehen/Eintragen gedacht ist).
   - Sprites via PokéAPI (Fallback auf pokemondb.net), deutsche Namen per
     Autocomplete (Gen 1).
 - **Sprite-Leiste** sitzt als eigener Streifen oberhalb des Videos (kein
@@ -31,11 +32,15 @@ geteiltem Team-Tracking, Orden/Level-Cap und Karte.
   und Team-leeren sitzen im ⚙-Einstellungen-Popup.
 - **Orden-Tracker + Level-Cap:** pro Spieler einstellbar (0–16 Orden für
   HeartGold/SoulSilver), zeigt automatisch das passende Level-Cap an
-  (echte Werte, siehe Quelle unten).
+  (echte Werte, siehe Quelle unten). Cap bei 0 Orden ist bereits das Cap
+  bis zum ersten Orden (z.B. Lv 13 bis Falkner besiegt ist).
 - **Spielauswahl:** aktuell HeartGold/SoulSilver, Struktur erweiterbar auf
   weitere Editionen (`GAMES`-Objekt in `public/app.js`).
-- **Interaktive Karte:** schematische, anklickbare Übersicht aller Orden-Stationen
-  (Johto → Kanto → Red), zeigt Gym-Leader, Ort und Level-Cap pro Station.
+- **Interaktive Karte (Johto):** eigenständig gestaltete, kartenähnliche
+  Übersicht (Landmasse, Route, Stadt-Icons statt reinem Graphen) der 8
+  Johto-Orden-Stationen, anklickbar für Gym-Leader/Level-Cap-Details. Bewusst
+  ein **originales Design**, keine Nachbildung des echten (urheberrechtlich
+  geschützten) Spielkarten-Artworks. Kanto ist aktuell nicht abgebildet.
 - **JSON-Export:** Team-Status (lebendig/tot/geboxt), Orden, Level-Cap und
   gewähltes Spiel für alle Spieler als Datei herunterladbar.
 - **Debug-Toggle:** Verbindungs-/Stream-Debug-Infos pro Kachel global ein-/ausblendbar.
@@ -81,6 +86,13 @@ neu deployed werden, damit neue Socket-Events greifen.
 
 ## Versionsverlauf
 
+- **v8.13** – Friedhof/Box von einklappbarer Zeile (kostete vertikalen Platz
+  im Stream) zu kompaktem Button + Popup neben dem Team umgebaut. **Bugfix:**
+  Level-Cap war einen Orden "hinterher" (0/16 zeigte "Start" statt Lv 13,
+  1/16 zeigte Lv 13 statt Lv 17 usw.) – jetzt korrekt: 0 Orden = Cap bis
+  Falkner (Lv 13), 1 Orden = Cap bis Bugsy (Lv 17), usw. Karte umgebaut auf
+  eigenständig gestaltetes, kartenähnliches Design (Landmasse/Route/Stadt-
+  Icons), nur noch Johto statt Johto+Kanto+Red.
 - **v8.12** – **Datenmodell-Umbau:** Team (6 Slots) und Friedhof/Box (unbegrenzt)
   sind jetzt getrennte Bereiche statt eines Status-Dropdowns pro Slot (ein
   Team-Pokémon ist per Definition lebendig). Server-Roster-Format geändert

@@ -83,21 +83,13 @@ body.spotlight .tile:not(.spotlightMain):hover {
   position: static;
   z-index: auto;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
   padding: 6px 10px;
   background: #0d0d16;
   border-bottom: 1px solid rgba(255,255,255,.14);
 }
-
-.spriteRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 5px;
-}
-
-.graveyardRow.hidden { display: none; }
 
 .spriteSlot {
   width: 34px;
@@ -150,6 +142,53 @@ body.spotlight .tile:not(.spotlightMain):hover {
   opacity: .5;
 }
 
+/* Friedhof & Box: kompakter Button in der Sprite-Leiste (NEBEN dem Team,
+   nicht mehr als eigene Zeile darunter) - öffnet ein Popup, das bei Bedarf
+   auch über dem Stream liegen darf (nur zum kurzen Nachsehen/Eintragen). */
+.graveyardBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.16);
+  color: rgba(255,255,255,.85);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.graveyardBtn:hover {
+  background: rgba(255,255,255,.14);
+  border-color: rgba(255,255,255,.28);
+}
+
+.graveyardPopover {
+  width: auto;
+  min-width: 180px;
+  max-width: 280px;
+}
+
+.graveyardPopoverHeader {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,.75);
+  margin-bottom: 4px;
+}
+
+.graveyardPopoverGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.graveyardPopoverEmpty {
+  font-size: 12px;
+  color: rgba(255,255,255,.5);
+}
+
 /* Friedhof & Box: Slots hier sind grundsätzlich kleiner/gedeckter, da nicht
    das aktive Team, sondern historische Einträge ohne Slot-Limit. */
 .graveSlot {
@@ -187,23 +226,6 @@ body.spotlight .tile:not(.spotlightMain):hover {
   font-size: 11px;
   text-shadow: 0 1px 3px #000;
 }
-
-.graveyardToggle {
-  align-self: flex-start;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: transparent;
-  border: none;
-  color: rgba(255,255,255,.6);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 0;
-}
-
-.graveyardToggle:hover { color: rgba(255,255,255,.9); }
-.toggleArrow { font-size: 8px; display: inline-block; }
-.graveyardCount { color: rgba(255,255,255,.4); font-weight: 400; margin-left: 2px; }
 
 .levelCapBadge {
   display: flex;
@@ -393,39 +415,64 @@ body.spotlight .tile:not(.spotlightMain):hover {
 .mapSvgContainer { width: 100%; }
 .mapSvgContainer svg { width: 100%; height: auto; display: block; }
 
-.mapLine { stroke: rgba(255,255,255,.25); stroke-width: 2; }
+.mapWater { fill: #1a3448; }
 
-.mapSectionLabel {
-  fill: rgba(255,255,255,.55);
-  font-size: 14px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .05em;
+.mapLand {
+  fill: #2f5c3f;
+  stroke: rgba(0,0,0,.35);
+  stroke-width: 2;
 }
 
-.mapNode circle {
-  fill: rgba(155,80,255,.55);
-  stroke: rgba(255,255,255,.4);
+.mapTree { fill: #244a30; opacity: .8; }
+.mapMountain { fill: #4a4a52; stroke: rgba(0,0,0,.3); stroke-width: 1; }
+
+.mapRoute {
+  fill: none;
+  stroke: #e8d9a8;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mapSectionLabel {
+  fill: rgba(255,255,255,.8);
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.mapTownBase {
+  fill: rgba(155,80,255,.8);
+  stroke: rgba(255,255,255,.5);
   stroke-width: 1.5;
   cursor: pointer;
-  transition: fill .15s ease, stroke .15s ease;
+  transition: fill .15s ease;
+}
+
+.mapTownRoof {
+  fill: rgba(90,40,170,.9);
+  pointer-events: none;
 }
 
 .mapNode text {
   fill: white;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   pointer-events: none;
 }
 
-.mapNode:hover circle,
-.mapNode:focus circle {
-  fill: rgba(155,80,255,.85);
+.mapNode:hover .mapTownBase,
+.mapNode:focus .mapTownBase {
+  fill: rgba(180,110,255,.95);
 }
 
-.mapNode.selected circle {
+.mapNode.selected .mapTownBase {
   fill: #21a957;
-  stroke: white;
+}
+
+.mapNode.selected .mapTownRoof {
+  fill: #157a3d;
 }
 
 .mapInfoPanel {

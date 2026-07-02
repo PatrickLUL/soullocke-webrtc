@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.12-sprites";
+const APP_VERSION = "v8.13-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -121,15 +121,13 @@ function getGame(key) { return GAMES[key] || GAMES.hgss; }
 
 function levelCapForBadges(gameKey, count) {
   const g = getGame(gameKey);
-  if (count <= 0) return null;
-  if (count <= g.badgeCaps.length) return g.badgeCaps[count - 1];
+  if (count < g.badgeCaps.length) return g.badgeCaps[count];
   return g.postgame.cap;
 }
 
 function badgeMilestoneLabel(gameKey, count) {
   const g = getGame(gameKey);
-  if (count <= 0) return "Noch keinen Orden";
-  if (count <= g.badgeNames.length) return g.badgeNames[count - 1];
+  if (count < g.badgeNames.length) return g.badgeNames[count];
   return g.postgame.name;
 }
 
@@ -358,9 +356,6 @@ function renderSpriteBar(playerId) {
 
   bar.innerHTML = "";
 
-  const teamRow = document.createElement("div");
-  teamRow.className = "spriteRow teamRow";
-
   roster.team.forEach((pokemon, index) => {
     const slot = document.createElement("div");
     slot.className = `spriteSlot ${pokemon.pokemon ? "" : "slotEmpty"} ${editable ? "editable" : ""}`;
@@ -383,63 +378,24 @@ function renderSpriteBar(playerId) {
         openSlotPopover(slot, index);
       });
     }
-    teamRow.appendChild(slot);
+    bar.appendChild(slot);
   });
-
-  bar.appendChild(teamRow);
 
   const graveyard = roster.graveyard || [];
   if (graveyard.length || editable) {
-    const graveToggle = document.createElement("button");
-    graveToggle.type = "button";
-    graveToggle.className = "graveyardToggle";
     const deadCount = graveyard.filter(p => p.status === "dead").length;
     const boxCount = graveyard.filter(p => p.status === "box").length;
-    graveToggle.innerHTML = `<span class="toggleArrow">▶</span> Friedhof &amp; Box <span class="graveyardCount">${deadCount} tot · ${boxCount} geboxt</span>`;
 
-    const graveRow = document.createElement("div");
-    graveRow.className = "spriteRow graveyardRow hidden";
-
-    graveyard.forEach((pokemon, gIndex) => {
-      const slot = document.createElement("div");
-      slot.className = `spriteSlot graveSlot ${pokemon.status}`;
-      slot.title = `${pokemon.pokemon} (${pokemon.status === "dead" ? "tot" : "geboxt"})`;
-
-      const img = document.createElement("img");
-      img.src = tinySpriteUrl(pokemon.pokemon);
-      img.alt = pokemon.pokemon;
-      img.onerror = () => { img.src = spriteUrl(pokemon.pokemon); };
-      slot.appendChild(img);
-
-      if (editable) {
-        slot.classList.add("editable");
-        slot.addEventListener("click", (event) => {
-          event.stopPropagation();
-          openGraveSlotPopover(slot, gIndex);
-        });
-      }
-      graveRow.appendChild(slot);
-    });
-
-    if (editable) {
-      const addSlot = document.createElement("div");
-      addSlot.className = "spriteSlot slotEmpty editable";
-      addSlot.title = "Pokémon zu Friedhof/Box hinzufügen";
-      addSlot.addEventListener("click", (event) => {
-        event.stopPropagation();
-        openGraveSlotPopover(addSlot, -1);
-      });
-      graveRow.appendChild(addSlot);
-    }
-
-    graveToggle.addEventListener("click", (event) => {
+    const graveBtn = document.createElement("button");
+    graveBtn.type = "button";
+    graveBtn.className = "graveyardBtn";
+    graveBtn.innerHTML = `☠${deadCount} 📦${boxCount}`;
+    graveBtn.title = "Friedhof & Box öffnen";
+    graveBtn.addEventListener("click", (event) => {
       event.stopPropagation();
-      const nowHidden = graveRow.classList.toggle("hidden");
-      graveToggle.querySelector(".toggleArrow").textContent = nowHidden ? "▶" : "▼";
+      openGraveyardPopover(graveBtn, playerId, editable);
     });
-
-    bar.appendChild(graveToggle);
-    bar.appendChild(graveRow);
+    bar.appendChild(graveBtn);
   }
 
   const badgeCount = getBadges(playerId);
@@ -490,8 +446,7 @@ function closeSlotPopover() {
   if (existing) existing.remove();
 }
 
-function positionPopover(pop, anchorEl) {
-  const rect = anchorEl.getBoundingClientRect();
+function positionPopoverAtRect(pop, rect) {
   const popRect = pop.getBoundingClientRect();
   let top = rect.bottom + 8;
   let left = rect.left;
@@ -503,6 +458,10 @@ function positionPopover(pop, anchorEl) {
 
   pop.style.top = `${top}px`;
   pop.style.left = `${left}px`;
+}
+
+function positionPopover(pop, anchorEl) {
+  positionPopoverAtRect(pop, anchorEl.getBoundingClientRect());
 }
 
 function openSlotPopover(anchorEl, index) {
@@ -581,6 +540,7 @@ function openGraveSlotPopover(anchorEl, gIndex) {
   const isAddSlot = gIndex === -1;
   const alreadyOpen = document.querySelector(".slotPopover")?.dataset.kind === "grave" &&
     document.querySelector(".slotPopover")?.dataset.index === String(gIndex);
+  const anchorRect = anchorEl.getBoundingClientRect();
   closeSlotPopover();
   if (alreadyOpen) return;
 
@@ -636,11 +596,78 @@ function openGraveSlotPopover(anchorEl, gIndex) {
   });
 
   document.body.appendChild(pop);
-  positionPopover(pop, anchorEl);
+  positionPopoverAtRect(pop, anchorRect);
   input.focus();
   input.select();
 }
 
+function openGraveyardPopover(anchorEl, playerId, editable) {
+  const alreadyOpen = document.querySelector(".slotPopover")?.dataset.kind === "graveyard-list" &&
+    document.querySelector(".slotPopover")?.dataset.player === playerId;
+  const anchorRect = anchorEl.getBoundingClientRect();
+  closeSlotPopover();
+  if (alreadyOpen) return;
+
+  const graveyard = getGraveyard(playerId);
+
+  const pop = document.createElement("div");
+  pop.className = "slotPopover graveyardPopover";
+  pop.dataset.kind = "graveyard-list";
+  pop.dataset.player = playerId;
+
+  const header = document.createElement("div");
+  header.className = "graveyardPopoverHeader";
+  header.textContent = "Friedhof & Box";
+  pop.appendChild(header);
+
+  if (!graveyard.length && !editable) {
+    const empty = document.createElement("div");
+    empty.className = "graveyardPopoverEmpty";
+    empty.textContent = "Noch keine Einträge.";
+    pop.appendChild(empty);
+  } else {
+    const grid = document.createElement("div");
+    grid.className = "graveyardPopoverGrid";
+
+    graveyard.forEach((entry, gIndex) => {
+      const slot = document.createElement("div");
+      slot.className = `spriteSlot graveSlot ${entry.status}`;
+      slot.title = `${entry.pokemon} (${entry.status === "dead" ? "tot" : "geboxt"})`;
+
+      const img = document.createElement("img");
+      img.src = tinySpriteUrl(entry.pokemon);
+      img.alt = entry.pokemon;
+      img.onerror = () => { img.src = spriteUrl(entry.pokemon); };
+      slot.appendChild(img);
+
+      if (editable) {
+        slot.classList.add("editable");
+        slot.addEventListener("click", (event) => {
+          event.stopPropagation();
+          openGraveSlotPopover(slot, gIndex);
+        });
+      }
+      grid.appendChild(slot);
+    });
+
+    if (editable) {
+      const addSlot = document.createElement("div");
+      addSlot.className = "spriteSlot slotEmpty editable";
+      addSlot.title = "Pokémon zu Friedhof/Box hinzufügen";
+      addSlot.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openGraveSlotPopover(addSlot, -1);
+      });
+      grid.appendChild(addSlot);
+    }
+
+    pop.appendChild(grid);
+  }
+
+  pop.addEventListener("click", (e) => e.stopPropagation());
+  document.body.appendChild(pop);
+  positionPopoverAtRect(pop, anchorRect);
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -652,48 +679,57 @@ function escapeHtml(value) {
 
 function buildMapSVG(gameKey) {
   const g = getGame(gameKey);
-  const cols = 8;
-  const spacing = 90;
-  const startX = 55;
-  const johtoY = 70;
-  const kantoY = 230;
-  const redY = 340;
 
-  const positions = [];
-  for (let i = 0; i < 8; i++) {
-    positions.push({ x: startX + i * spacing, y: johtoY, label: g.badgeNames[i], cap: g.badgeCaps[i], n: i + 1 });
-  }
-  for (let i = 0; i < 8; i++) {
-    positions.push({ x: startX + i * spacing, y: kantoY, label: g.badgeNames[8 + i], cap: g.badgeCaps[8 + i], n: i + 9 });
-  }
-  positions.push({ x: startX + 7 * spacing, y: redY, label: g.postgame.name, cap: g.postgame.cap, n: 17 });
+  // Nur Johto (erste 8 Orden), original gestaltete schematische Karte -
+  // KEINE Nachbildung des echten, urheberrechtlich geschützten Spielkarten-
+  // Artworks. Positionen sind frei gewählt (grober Ost-West-Verlauf,
+  // Anlehnung an die Reihenfolge der Städte), nicht die realen Koordinaten.
+  const positions = [
+    { x: 80,  y: 260, label: g.badgeNames[0], cap: g.badgeCaps[0] },  // Violet City
+    { x: 190, y: 150, label: g.badgeNames[1], cap: g.badgeCaps[1] },  // Azalea Town
+    { x: 340, y: 110, label: g.badgeNames[2], cap: g.badgeCaps[2] },  // Goldenrod City
+    { x: 480, y: 160, label: g.badgeNames[3], cap: g.badgeCaps[3] },  // Ecruteak City
+    { x: 620, y: 110, label: g.badgeNames[4], cap: g.badgeCaps[4] },  // Cianwood City
+    { x: 480, y: 300, label: g.badgeNames[5], cap: g.badgeCaps[5] },  // Olivine City
+    { x: 340, y: 350, label: g.badgeNames[6], cap: g.badgeCaps[6] },  // Mahogany Town
+    { x: 200, y: 400, label: g.badgeNames[7], cap: g.badgeCaps[7] }   // Blackthorn City
+  ].map((p, i) => ({ ...p, n: i + 1 }));
 
-  let linesHtml = "";
-  for (let i = 0; i < positions.length - 1; i++) {
-    const a = positions[i];
-    const b = positions[i + 1];
-    linesHtml += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="mapLine" />`;
-  }
+  let routeD = `M ${positions[0].x} ${positions[0].y}`;
+  for (let i = 1; i < positions.length; i++) routeD += ` L ${positions[i].x} ${positions[i].y}`;
+
+  const decor = `
+    <ellipse cx="120" cy="80" rx="40" ry="22" class="mapTree" />
+    <ellipse cx="150" cy="70" rx="30" ry="18" class="mapTree" />
+    <polygon points="560,220 590,270 530,270" class="mapMountain" />
+    <polygon points="600,235 625,270 575,270" class="mapMountain" />
+    <ellipse cx="420" cy="420" rx="34" ry="18" class="mapTree" />
+  `;
 
   let nodesHtml = "";
   positions.forEach(p => {
     nodesHtml += `
       <g class="mapNode" tabindex="0" data-name="${escapeHtml(p.label)}" data-cap="${p.cap}" data-n="${p.n}">
-        <circle cx="${p.x}" cy="${p.y}" r="17"></circle>
-        <text x="${p.x}" y="${p.y + 5}" text-anchor="middle">${p.n}</text>
+        <rect x="${p.x - 22}" y="${p.y - 22}" width="44" height="44" rx="10" class="mapTownBase"></rect>
+        <rect x="${p.x - 22}" y="${p.y - 22}" width="44" height="20" rx="10" class="mapTownRoof"></rect>
+        <text x="${p.x}" y="${p.y + 7}" text-anchor="middle">${p.n}</text>
       </g>`;
   });
 
-  return `<svg viewBox="0 0 740 380" xmlns="http://www.w3.org/2000/svg">
-    <text x="55" y="30" class="mapSectionLabel">Johto</text>
-    <text x="55" y="190" class="mapSectionLabel">Kanto</text>
-    ${linesHtml}
+  return `<svg viewBox="0 0 700 460" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="700" height="460" class="mapWater" />
+    <path d="M 30 240 C 20 140, 90 40, 220 40 L 640 40 C 670 40, 680 60, 680 90
+             L 680 380 C 680 420, 660 440, 620 440 L 120 440
+             C 60 440, 30 400, 30 340 Z" class="mapLand" />
+    ${decor}
+    <path d="${routeD}" class="mapRoute" />
     ${nodesHtml}
+    <text x="55" y="475" class="mapSectionLabel">Johto</text>
   </svg>`;
 }
 
 function openMap() {
-  mapGameLabel.textContent = getGame(currentGame).label;
+  mapGameLabel.textContent = `${getGame(currentGame).label} – Johto`;
   mapSvgContainer.innerHTML = buildMapSVG(currentGame);
   mapInfoPanel.textContent = "Klicke auf eine Station für Details zu Orden & Level-Cap.";
   mapModal.classList.remove("hidden");
