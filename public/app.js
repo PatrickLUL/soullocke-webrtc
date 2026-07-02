@@ -683,48 +683,313 @@ function escapeHtml(value) {
 // Die Koordinaten sind Prozentwerte relativ zur Karten-Grafik.
 // Änderungen im Editor werden lokal im Browser gespeichert und können als JSON exportiert werden.
 const MAP_IMAGE_PATH = "/map-johto.png";
-const MAP_STORAGE_KEY = "soullockeJohtoMapMarkersV3";
+const MAP_STORAGE_KEY = "soullockeJohtoMapMarkersV4";
 
 const DEFAULT_JOHTO_MARKERS = [
-  { id: "badge-1", type: "gymcity", n: 1, name: "Violet City / Falkner", cap: 13, encounterDone: false, xPct: 18, yPct: 30 },
-  { id: "badge-2", type: "gymcity", n: 2, name: "Azalea Town / Bugsy", cap: 17, encounterDone: false, xPct: 20, yPct: 52 },
-  { id: "badge-3", type: "gymcity", n: 3, name: "Goldenrod City / Whitney", cap: 19, encounterDone: false, xPct: 38, yPct: 48 },
-  { id: "badge-4", type: "gymcity", n: 4, name: "Ecruteak City / Morty", cap: 25, encounterDone: false, xPct: 53, yPct: 32 },
-  { id: "badge-5", type: "gymcity", n: 5, name: "Cianwood City / Chuck", cap: 31, encounterDone: false, xPct: 74, yPct: 55 },
-  { id: "badge-6", type: "gymcity", n: 6, name: "Olivine City / Jasmine", cap: 35, encounterDone: false, xPct: 47, yPct: 68 },
-  { id: "badge-7", type: "gymcity", n: 7, name: "Mahogany Town / Pryce", cap: 34, encounterDone: false, xPct: 66, yPct: 26 },
-  { id: "badge-8", type: "gymcity", n: 8, name: "Blackthorn City / Clair", cap: 41, encounterDone: false, xPct: 84, yPct: 30 },
-
-  { id: "city-new-bark", type: "city", name: "New Bark Town", encounterDone: false, xPct: 90, yPct: 55 },
-  { id: "city-cherrygrove", type: "city", name: "Cherrygrove City", encounterDone: false, xPct: 74, yPct: 66 },
-
-  { id: "route-29", type: "route", name: "Route 29", encounterDone: false, xPct: 83, yPct: 61 },
-  { id: "route-30", type: "route", name: "Route 30", encounterDone: false, xPct: 72, yPct: 54 },
-  { id: "route-31", type: "route", name: "Route 31", encounterDone: false, xPct: 31, yPct: 38 },
-  { id: "route-32", type: "route", name: "Route 32", encounterDone: false, xPct: 21, yPct: 45 },
-  { id: "route-33", type: "route", name: "Route 33", encounterDone: false, xPct: 25, yPct: 60 },
-  { id: "route-34", type: "route", name: "Route 34", encounterDone: false, xPct: 38, yPct: 67 },
-  { id: "route-35", type: "route", name: "Route 35", encounterDone: false, xPct: 39, yPct: 47 },
-  { id: "route-36", type: "route", name: "Route 36", encounterDone: false, xPct: 43, yPct: 37 },
-  { id: "route-37", type: "route", name: "Route 37", encounterDone: false, xPct: 49, yPct: 39 },
-  { id: "route-38", type: "route", name: "Route 38", encounterDone: false, xPct: 45, yPct: 48 },
-  { id: "route-39", type: "route", name: "Route 39", encounterDone: false, xPct: 47, yPct: 58 },
-  { id: "route-40", type: "route", name: "Route 40", encounterDone: false, xPct: 36, yPct: 78 },
-  { id: "route-41", type: "route", name: "Route 41", encounterDone: false, xPct: 23, yPct: 73 },
-  { id: "route-42", type: "route", name: "Route 42", encounterDone: false, xPct: 61, yPct: 43 },
-  { id: "route-43", type: "route", name: "Route 43", encounterDone: false, xPct: 66, yPct: 17 },
-  { id: "route-44", type: "route", name: "Route 44", encounterDone: false, xPct: 75, yPct: 40 },
-  { id: "route-45", type: "route", name: "Route 45", encounterDone: false, xPct: 84, yPct: 47 },
-  { id: "route-46", type: "route", name: "Route 46", encounterDone: false, xPct: 78, yPct: 55 },
-  { id: "route-47", type: "route", name: "Route 47", encounterDone: false, xPct: 17, yPct: 62 },
-  { id: "route-48", type: "route", name: "Route 48", encounterDone: false, xPct: 26, yPct: 40 },
-
-  { id: "place-ruins", type: "place", name: "Ruins of Alph", encounterDone: false, xPct: 30, yPct: 47 },
-  { id: "place-ilex", type: "place", name: "Ilex Forest", encounterDone: false, xPct: 30, yPct: 61 },
-  { id: "place-national-park", type: "place", name: "National Park", encounterDone: false, xPct: 39, yPct: 42 },
-  { id: "place-lake-rage", type: "place", name: "Lake of Rage", encounterDone: false, xPct: 66, yPct: 17 },
-  { id: "place-ice-path", type: "place", name: "Ice Path", encounterDone: false, xPct: 77, yPct: 33 },
-  { id: "place-dark-cave", type: "place", name: "Dark Cave", encounterDone: false, xPct: 83, yPct: 45 }
+  {
+    "id": "badge-1",
+    "type": "gymcity",
+    "n": 1,
+    "name": "Violet City / Falkner",
+    "cap": 13,
+    "encounterDone": false,
+    "xPct": 31.32295719844358,
+    "yPct": 56.09767005053441
+  },
+  {
+    "id": "badge-2",
+    "type": "gymcity",
+    "n": 2,
+    "name": "Azalea Town / Bugsy",
+    "cap": 17,
+    "encounterDone": false,
+    "xPct": 26.783398184176395,
+    "yPct": 87.867268905684
+  },
+  {
+    "id": "badge-3",
+    "type": "gymcity",
+    "n": 3,
+    "name": "Goldenrod City / Whitney",
+    "cap": 19,
+    "encounterDone": false,
+    "xPct": 22.762645914396888,
+    "yPct": 70.6945127677653
+  },
+  {
+    "id": "badge-4",
+    "type": "gymcity",
+    "n": 4,
+    "name": "Ecruteak City / Morty",
+    "cap": 25,
+    "encounterDone": false,
+    "xPct": 24.708171206225682,
+    "yPct": 41.78703993560217
+  },
+  {
+    "id": "badge-5",
+    "type": "gymcity",
+    "n": 5,
+    "name": "Cianwood City / Chuck",
+    "cap": 31,
+    "encounterDone": false,
+    "xPct": 10.181582360570687,
+    "yPct": 70.40830016546667
+  },
+  {
+    "id": "badge-6",
+    "type": "gymcity",
+    "n": 6,
+    "name": "Olivine City / Jasmine",
+    "cap": 35,
+    "encounterDone": false,
+    "xPct": 18.2230869001297,
+    "yPct": 55.81145744823577
+  },
+  {
+    "id": "badge-7",
+    "type": "gymcity",
+    "n": 7,
+    "name": "Mahogany Town / Pryce",
+    "cap": 34,
+    "encounterDone": false,
+    "xPct": 34.56549935149157,
+    "yPct": 43.79052815169268
+  },
+  {
+    "id": "badge-8",
+    "type": "gymcity",
+    "n": 8,
+    "name": "Blackthorn City / Clair",
+    "cap": 41,
+    "encounterDone": false,
+    "xPct": 44.29312581063554,
+    "yPct": 40.92840212870623
+  },
+  {
+    "id": "city-new-bark",
+    "type": "city",
+    "name": "New Bark Town",
+    "encounterDone": false,
+    "xPct": 45.97924773022049,
+    "yPct": 78.13604042753008
+  },
+  {
+    "id": "city-cherrygrove",
+    "type": "city",
+    "name": "Cherrygrove City",
+    "encounterDone": false,
+    "xPct": 35.73281452658885,
+    "yPct": 78.13604042753008
+  },
+  {
+    "id": "route-29",
+    "type": "route",
+    "name": "Route 29",
+    "encounterDone": false,
+    "xPct": 41.180285343709464,
+    "yPct": 78.42225302982871
+  },
+  {
+    "id": "route-30",
+    "type": "route",
+    "name": "Route 30",
+    "encounterDone": false,
+    "xPct": 37.029831387808045,
+    "yPct": 67.83238674477886
+  },
+  {
+    "id": "route-31",
+    "type": "route",
+    "name": "Route 31",
+    "encounterDone": false,
+    "xPct": 35.862516212710766,
+    "yPct": 55.81145744823577
+  },
+  {
+    "id": "route-32",
+    "type": "route",
+    "name": "Route 32",
+    "encounterDone": false,
+    "xPct": 30.41504539559014,
+    "yPct": 71.83936317695988
+  },
+  {
+    "id": "route-33",
+    "type": "route",
+    "name": "Route 33",
+    "encounterDone": false,
+    "xPct": 31.712062256809336,
+    "yPct": 89.29833191717724
+  },
+  {
+    "id": "route-34",
+    "type": "route",
+    "name": "Route 34",
+    "encounterDone": false,
+    "xPct": 23.151750972762645,
+    "yPct": 79.85331604132195
+  },
+  {
+    "id": "route-35",
+    "type": "route",
+    "name": "Route 35",
+    "encounterDone": false,
+    "xPct": 23.151750972762645,
+    "yPct": 59.53222127811814
+  },
+  {
+    "id": "route-36",
+    "type": "route",
+    "name": "Route 36",
+    "encounterDone": false,
+    "xPct": 26.913099870298314,
+    "yPct": 56.09767005053441
+  },
+  {
+    "id": "route-37",
+    "type": "route",
+    "name": "Route 37",
+    "encounterDone": false,
+    "xPct": 26.653696498054476,
+    "yPct": 48.942354993068285
+  },
+  {
+    "id": "route-38",
+    "type": "route",
+    "name": "Route 38",
+    "encounterDone": false,
+    "xPct": 20.298313878080414,
+    "yPct": 41.21461473100487
+  },
+  {
+    "id": "route-39",
+    "type": "route",
+    "name": "Route 39",
+    "encounterDone": false,
+    "xPct": 16.536964980544745,
+    "yPct": 45.79401636778319
+  },
+  {
+    "id": "route-40",
+    "type": "route",
+    "name": "Route 40",
+    "encounterDone": false,
+    "xPct": 14.980544747081712,
+    "yPct": 62.9667725057019
+  },
+  {
+    "id": "route-41",
+    "type": "route",
+    "name": "Route 41",
+    "encounterDone": false,
+    "xPct": 14.332036316472113,
+    "yPct": 72.98421358615447
+  },
+  {
+    "id": "route-42",
+    "type": "route",
+    "name": "Route 42",
+    "encounterDone": false,
+    "xPct": 30.285343709468222,
+    "yPct": 42.93189034479675
+  },
+  {
+    "id": "route-43",
+    "type": "route",
+    "name": "Route 43",
+    "encounterDone": false,
+    "xPct": 34.824902723735406,
+    "yPct": 35.204150082733335
+  },
+  {
+    "id": "route-44",
+    "type": "route",
+    "name": "Route 44",
+    "encounterDone": false,
+    "xPct": 39.494163424124515,
+    "yPct": 42.93189034479675
+  },
+  {
+    "id": "route-45",
+    "type": "route",
+    "name": "Route 45",
+    "encounterDone": false,
+    "xPct": 44.29312581063554,
+    "yPct": 58.673583471222216
+  },
+  {
+    "id": "route-46",
+    "type": "route",
+    "name": "Route 46",
+    "encounterDone": false,
+    "xPct": 41.958495460440986,
+    "yPct": 70.12208756316801
+  },
+  {
+    "id": "route-47",
+    "type": "route",
+    "name": "Route 47",
+    "encounterDone": false,
+    "xPct": 5.123216601815823,
+    "yPct": 73.8428513930504
+  },
+  {
+    "id": "route-48",
+    "type": "route",
+    "name": "Route 48",
+    "encounterDone": false,
+    "xPct": 25.616083009079116,
+    "yPct": 28.621260229864497
+  },
+  {
+    "id": "place-ruins",
+    "type": "place",
+    "name": "Ruins of Alph",
+    "encounterDone": false,
+    "xPct": 27.172503242542152,
+    "yPct": 65.5426859263897
+  },
+  {
+    "id": "place-ilex",
+    "type": "place",
+    "name": "Ilex Forest",
+    "encounterDone": false,
+    "xPct": 21.46562905317769,
+    "yPct": 89.58454451947587
+  },
+  {
+    "id": "place-national-park",
+    "type": "place",
+    "name": "National Park",
+    "encounterDone": false,
+    "xPct": 22.37354085603113,
+    "yPct": 50.9458432091588
+  },
+  {
+    "id": "place-lake-rage",
+    "type": "place",
+    "name": "Lake of Rage",
+    "encounterDone": false,
+    "xPct": 34.69520103761349,
+    "yPct": 26.903984616072623
+  },
+  {
+    "id": "place-ice-path",
+    "type": "place",
+    "name": "Ice Path",
+    "encounterDone": false,
+    "xPct": 47.92477302204929,
+    "yPct": 31.1971736505523
+  },
+  {
+    "id": "place-dark-cave",
+    "type": "place",
+    "name": "Dark Cave",
+    "encounterDone": false,
+    "xPct": 39.494163424124515,
+    "yPct": 52.66311882295067
+  }
 ];
 
 let mapMarkers = loadMapMarkers();
