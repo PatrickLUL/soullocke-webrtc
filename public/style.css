@@ -499,3 +499,44 @@ body.spotlight .tile:not(.spotlightMain):hover {
   font-size: 14px;
   min-height: 20px;
 }
+
+
+/* v8.15 map improvements */
+.mapImageContainer { min-height: 280px; }
+.mapHotspot { font-size: 10px; }
+.mapHotspot-gym {
+  width: 28px; height: 28px; border-radius: 9px;
+  background: rgba(155,80,255,.92);
+}
+.mapHotspot-town {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: rgba(255,60,90,.88);
+  font-size: 0;
+}
+.mapHotspot-town::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: white; }
+.mapHotspot-route {
+  width: 26px; height: 20px; border-radius: 7px;
+  background: rgba(40,145,255,.82);
+  font-size: 10px;
+}
+.mapHotspot-place {
+  width: 22px; height: 22px; border-radius: 8px;
+  background: rgba(35,170,95,.86);
+  font-size: 10px;
+}
+.mapHotspot.selected { background: #21a957; outline: 2px solid rgba(255,255,255,.75); }
+.mapLegend {
+  position: absolute; left: 10px; bottom: 10px; z-index: 2;
+  display: flex; gap: 10px; flex-wrap: wrap;
+  padding: 6px 8px; border-radius: 9px;
+  background: rgba(0,0,0,.58);
+  border: 1px solid rgba(255,255,255,.14);
+  font-size: 12px;
+}
+.mapLegend span { display: inline-flex; align-items: center; gap: 5px; }
+.mapLegend b { width: 10px; height: 10px; display: inline-block; border-radius: 3px; }
+.legendGym { background: rgba(155,80,255,.92); }
+.legendTown { background: rgba(255,60,90,.88); border-radius: 50% !important; }
+.legendRoute { background: rgba(40,145,255,.82); }
+.legendPlace { background: rgba(35,170,95,.86); }
+.mapInfoPanel span { display: block; margin-top: 2px; }

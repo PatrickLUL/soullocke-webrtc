@@ -1,130 +1,16 @@
-# Soullocke WebRTC
+# Soullocke WebRTC v8.15-map
 
-Private Browser-Spielansicht für bis zu 4 Spieler – gedacht für gemeinsame
-Pokémon SoulLink-/Nuzlocke-Runs per Bildschirmfreigabe (WebRTC) mit
-geteiltem Team-Tracking, Orden/Level-Cap und Karte.
+Map-Update:
+- Karte basiert weiter auf deinem aktuellen Projektstand.
+- Nicht mehr nur 8 Arena-Buttons.
+- Zusätzliche Marker für Städte, Routen und wichtige Orte.
+- Unterschiedliche Marker-Farben: Arena, Stadt, Route, Ort.
+- Info-Panel zeigt Details je Marker.
+- Positionen sind datengetrieben in `JOHTO_MAP_POINTS`, dadurch leicht nachjustierbar.
 
-**Aktuelle Version:** v8.14-sprites
-
-## Features
-
-- **Bildschirmfreigabe per WebRTC** (P2P über Socket.IO-Signaling), Qualität
-  einstellbar (480p/20 FPS bis 1080p/60 FPS).
-- **2×2-Raster** für bis zu 4 Spieler, Vollbild-Ansicht pro Kachel, sowie ein
-  **Spotlight-Modus** (ein Stream groß, die anderen 3 klein als anklickbare
-  Vorschau-Reihe – Klick auf eine Vorschau macht sie zum Haupt-Stream).
-- **Team-Tracking pro Spieler, getrennt in zwei Bereiche:**
-  - **Team** – 6 feste Slots, immer lebendig (kein Status-Feld nötig). Klick
-    auf einen Slot öffnet ein Popup zur Eingabe; bei belegtem Slot zusätzlich
-    "Als tot markieren" / "In Box verschieben" (verschiebt automatisch in
-    den Friedhof-Bereich, Team-Slot bleibt danach leer zum manuellen Neu-
-    Befüllen).
-  - **Friedhof & Box** – kompakter Button direkt neben den Team-Slots
-    (☠ Anzahl · 📦 Anzahl), öffnet bei Klick ein Popup mit allen Einträgen.
-    Kein Slot-Limit, kein fester Platz in der Leiste (Popup darf auch kurz
-    über dem Stream liegen, da es nur zum Nachsehen/Eintragen gedacht ist).
-  - Sprites via PokéAPI (Fallback auf pokemondb.net), deutsche Namen per
-    Autocomplete (Gen 1).
-- **Sprite-Leiste** sitzt als eigener Streifen oberhalb des Videos (kein
-  Overlay mehr auf dem Stream).
-- **Schlanke Topbar:** nur Kernaktionen (Raum, Name, Beitreten, Freigeben,
-  Karte) direkt sichtbar; Qualität, Spielauswahl, Debug-Toggle, Team-Export
-  und Team-leeren sitzen im ⚙-Einstellungen-Popup.
-- **Orden-Tracker + Level-Cap:** pro Spieler einstellbar (0–16 Orden für
-  HeartGold/SoulSilver), zeigt automatisch das passende Level-Cap an
-  (echte Werte, siehe Quelle unten). Cap bei 0 Orden ist bereits das Cap
-  bis zum ersten Orden (z.B. Lv 13 bis Falkner besiegt ist).
-- **Spielauswahl:** aktuell HeartGold/SoulSilver, Struktur erweiterbar auf
-  weitere Editionen (`GAMES`-Objekt in `public/app.js`).
-- **Interaktive Karte (Johto):** zeigt ein Kartenbild mit 8 anklickbaren
-  Stationen (Gym-Leader/Level-Cap-Details) als Overlay. **Wichtig:** Aus
-  Urheberrechtsgründen enthält das Projekt keine echte Spielkarten-Grafik -
-  lege dein eigenes Kartenbild (z.B. ein selbst erstellter Screenshot aus
-  deinem eigenen Spiel) unter `public/map-johto.png` ab, dann erscheint es
-  automatisch mit den Hotspots. Ohne Bild zeigt das Karten-Modal einen
-  Hinweistext mit dem erwarteten Dateipfad. Die Hotspot-Positionen (Prozent-
-  Koordinaten) lassen sich im `JOHTO_HOTSPOTS`-Array in `public/app.js`
-  per Auge nachjustieren, sobald dein Bild eingefügt ist.
-- **JSON-Export:** Team-Status (lebendig/tot/geboxt), Orden, Level-Cap und
-  gewähltes Spiel für alle Spieler als Datei herunterladbar.
-- **Debug-Toggle:** Verbindungs-/Stream-Debug-Infos pro Kachel global ein-/ausblendbar.
-
-## Setup
-
-```bash
-npm install
-node server.js
-```
-
-Standardport: `3000` (überschreibbar via `PORT`-Umgebungsvariable).
-Raum-Link: `http://localhost:3000/room/<Raumcode>`
-
-## Architektur
-
-- `server.js` – Express-Server + Socket.IO-Signaling. Hält pro Raum:
-  Spielerliste, Teams, Orden-Stände, gewähltes Spiel. Vermittelt WebRTC-
-  Description/ICE zwischen Peers, leitet aber keine Mediendaten selbst weiter.
-- `public/app.js` – kompletter Client: WebRTC-Verbindungsaufbau, Team-/Orden-
-  UI, Karten-Rendering, JSON-Export.
-- `public/index.html` / `public/style.css` – Markup & Styling.
-
-## Level-Cap-Quelle
-
-Die HeartGold/SoulSilver-Level-Caps basieren auf dem Level des stärksten
-Pokémon jedes Gym-Leaders/Champions (Hardcore-Nuzlocke-Konvention), Quelle:
-[Nuzlocke University – Hardcore Nuzlocke Level Caps by Generation](https://nuzlockeuniversity.ca/2022/01/18/hardcore-nuzlocke-level-caps-by-generation/).
-Die Kanto-Orden-Reihenfolge ist im Spiel nicht zwingend vorgegeben; hier wird
-die dort gelistete Reihenfolge (Pewter → Cerulean → Vermilion → Celadon →
-Fuchsia → Saffron → Seafoam → Viridian) verwendet.
-
-## Deploy
-
+Deploy:
 ```bash
 git add .
-git commit -m "<Beschreibung der Änderung>"
+git commit -m "improve johto map markers"
 git push
 ```
-
-Bei Änderungen an `server.js` muss der laufende Server neu gestartet bzw.
-neu deployed werden, damit neue Socket-Events greifen.
-
-## Versionsverlauf
-
-- **v8.14** – Karte umgebaut von eigenständig gezeichnetem SVG auf ein
-  Bild+Hotspot-System: zeigt jetzt ein reines `<img>`-Kartenbild mit 8
-  anklickbaren Stationen als Overlay. Die eigentliche Kartengrafik ist
-  **nicht** im Projekt enthalten (Nintendo/Game-Freak-Artwork ist
-  urheberrechtlich geschützt) - muss selbst unter `public/map-johto.png`
-  ergänzt werden. Siehe Hinweis unter "Interaktive Karte" oben.
-- **v8.13** – Friedhof/Box von einklappbarer Zeile (kostete vertikalen Platz
-  im Stream) zu kompaktem Button + Popup neben dem Team umgebaut. **Bugfix:**
-  Level-Cap war einen Orden "hinterher" (0/16 zeigte "Start" statt Lv 13,
-  1/16 zeigte Lv 13 statt Lv 17 usw.) – jetzt korrekt: 0 Orden = Cap bis
-  Falkner (Lv 13), 1 Orden = Cap bis Bugsy (Lv 17), usw. Karte umgebaut auf
-  eigenständig gestaltetes, kartenähnliches Design (Landmasse/Route/Stadt-
-  Icons), nur noch Johto statt Johto+Kanto+Red.
-- **v8.12** – **Datenmodell-Umbau:** Team (6 Slots) und Friedhof/Box (unbegrenzt)
-  sind jetzt getrennte Bereiche statt eines Status-Dropdowns pro Slot (ein
-  Team-Pokémon ist per Definition lebendig). Server-Roster-Format geändert
-  von `Array(6)` auf `{ team: Array(6), graveyard: Array }` – **Team-Daten
-  aus v8.11 und älter sind nicht kompatibel** und werden beim ersten Neustart
-  des Servers zurückgesetzt.
-- **v8.11** – **Bugfix:** leere Pokémon-Slots waren unklickbar, weil sie
-  versehentlich die globale CSS-Klasse `.empty` (vom Video-Platzhalter,
-  `pointer-events: none`) mitbenutzt haben – jetzt eigene Klasse `slotEmpty`.
-  Neu: **Spotlight-Modus** (ein Stream groß, andere klein/anklickbar als
-  Alternative zum Vollbild).
-- **v8.10** – Topbar aufgeräumt (Einstellungen-Popup für Qualität, Spielauswahl,
-  Debug-Toggle, Export, Team leeren). Pokémon-Auswahl von rechter Sidebar auf
-  kleines Popup direkt am angeklickten Slot umgestellt.
-- **v8.9** – Spielauswahl, Orden-Tracker mit echten Level-Cap-Werten,
-  interaktive Karte, JSON-Export erweitert (Orden/Level-Cap/Spiel).
-- **v8.8** – Debug-Toggle (global ein-/ausblendbar), JSON-Team-Export
-  (lebendig/tot/geboxt pro Spieler).
-- **v8.7** – Sprite-Leiste als eigener Streifen oberhalb des Videos
-  (kein Overlay mehr), Tile-Layout auf Flexbox umgestellt.
-- **v8.6** – Sprite-Leiste kompakter und transparenter (Overlay-Variante).
-- **v8.5** – Größere Sprite-Slots, Status-Rahmenfarben, Team-Editor als
-  rechte Sidebar statt zentriertem Overlay.
-- **v8.4** – Stabile Basis: Autocomplete, deutsche Gen-1-Namen, PokéAPI-
-  Sprite-URLs.

@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.14-sprites";
+const APP_VERSION = "v8.15-map";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -684,30 +684,108 @@ function escapeHtml(value) {
 // Kartenbildes (siehe MAP_IMAGE_PATH unten) am besten per Auge nachjustieren.
 const MAP_IMAGE_PATH = "/map-johto.png";
 
-const JOHTO_HOTSPOTS = [
-  { xPct: 18, yPct: 30 },  // 1 Violet City
-  { xPct: 20, yPct: 52 },  // 2 Azalea Town
-  { xPct: 38, yPct: 48 },  // 3 Goldenrod City
-  { xPct: 53, yPct: 32 },  // 4 Ecruteak City
-  { xPct: 47, yPct: 68 },  // 5 Olivine City
-  { xPct: 74, yPct: 55 },  // 6 Cianwood City
-  { xPct: 66, yPct: 26 },  // 7 Mahogany Town
-  { xPct: 84, yPct: 30 }   // 8 Blackthorn City
+// v8.15: Die Karte ist jetzt datengetrieben. Dadurch können wir Orte,
+// Routen, Höhlen und Arenen getrennt anzeigen und später leicht verschieben.
+// xPct/yPct sind Prozent-Koordinaten relativ zum Kartenbild.
+const JOHTO_MAP_POINTS = [
+  // Arenen / Level-Caps
+  { id: "gym-violet", type: "gym", order: 1, xPct: 18, yPct: 30, title: "Falkner", subtitle: "Violet City", cap: 13 },
+  { id: "gym-azalea", type: "gym", order: 2, xPct: 20, yPct: 55, title: "Bugsy", subtitle: "Azalea Town", cap: 17 },
+  { id: "gym-goldenrod", type: "gym", order: 3, xPct: 38, yPct: 58, title: "Whitney", subtitle: "Goldenrod City", cap: 19 },
+  { id: "gym-ecruteak", type: "gym", order: 4, xPct: 53, yPct: 33, title: "Morty", subtitle: "Ecruteak City", cap: 25 },
+  { id: "gym-cianwood", type: "gym", order: 5, xPct: 47, yPct: 76, title: "Chuck", subtitle: "Cianwood City", cap: 31 },
+  { id: "gym-olivine", type: "gym", order: 6, xPct: 41, yPct: 76, title: "Jasmine", subtitle: "Olivine City", cap: 35 },
+  { id: "gym-mahogany", type: "gym", order: 7, xPct: 68, yPct: 30, title: "Pryce", subtitle: "Mahogany Town", cap: 34 },
+  { id: "gym-blackthorn", type: "gym", order: 8, xPct: 85, yPct: 30, title: "Clair", subtitle: "Blackthorn City", cap: 41 },
+
+  // Städte / wichtige Orte
+  { id: "new-bark", type: "town", xPct: 89, yPct: 65, title: "New Bark Town", subtitle: "Startort" },
+  { id: "cherrygrove", type: "town", xPct: 78, yPct: 76, title: "Cherrygrove City" },
+  { id: "violet", type: "town", xPct: 18, yPct: 30, title: "Violet City" },
+  { id: "azalea", type: "town", xPct: 20, yPct: 55, title: "Azalea Town" },
+  { id: "goldenrod", type: "town", xPct: 38, yPct: 58, title: "Goldenrod City" },
+  { id: "ecruteak", type: "town", xPct: 53, yPct: 33, title: "Ecruteak City" },
+  { id: "olivine", type: "town", xPct: 41, yPct: 76, title: "Olivine City" },
+  { id: "cianwood", type: "town", xPct: 47, yPct: 76, title: "Cianwood City" },
+  { id: "mahogany", type: "town", xPct: 68, yPct: 30, title: "Mahogany Town" },
+  { id: "blackthorn", type: "town", xPct: 85, yPct: 30, title: "Blackthorn City" },
+  { id: "lake-rage", type: "place", xPct: 67, yPct: 14, title: "Lake of Rage" },
+  { id: "national-park", type: "place", xPct: 39, yPct: 38, title: "National Park" },
+  { id: "ruins-alph", type: "place", xPct: 27, yPct: 42, title: "Ruins of Alph" },
+  { id: "sprout-tower", type: "place", xPct: 15, yPct: 24, title: "Sprout Tower" },
+  { id: "ilex", type: "place", xPct: 29, yPct: 60, title: "Ilex Forest" },
+  { id: "union-cave", type: "place", xPct: 23, yPct: 45, title: "Union Cave" },
+  { id: "mt-mortar", type: "place", xPct: 61, yPct: 37, title: "Mt. Mortar" },
+  { id: "ice-path", type: "place", xPct: 77, yPct: 30, title: "Ice Path" },
+  { id: "whirl", type: "place", xPct: 39, yPct: 72, title: "Whirl Islands" },
+
+  // Routen / Wasserwege - grob auf die Karte gelegt, damit sie anklickbar sind.
+  { id: "r29", type: "route", xPct: 83, yPct: 70, title: "Route 29" },
+  { id: "r30", type: "route", xPct: 76, yPct: 62, title: "Route 30" },
+  { id: "r31", type: "route", xPct: 70, yPct: 51, title: "Route 31" },
+  { id: "r32", type: "route", xPct: 20, yPct: 42, title: "Route 32" },
+  { id: "r33", type: "route", xPct: 23, yPct: 54, title: "Route 33" },
+  { id: "r34", type: "route", xPct: 33, yPct: 64, title: "Route 34" },
+  { id: "r35", type: "route", xPct: 38, yPct: 46, title: "Route 35" },
+  { id: "r36", type: "route", xPct: 31, yPct: 35, title: "Route 36" },
+  { id: "r37", type: "route", xPct: 45, yPct: 35, title: "Route 37" },
+  { id: "r38", type: "route", xPct: 47, yPct: 43, title: "Route 38" },
+  { id: "r39", type: "route", xPct: 43, yPct: 58, title: "Route 39" },
+  { id: "r40", type: "route", xPct: 42, yPct: 86, title: "Route 40" },
+  { id: "r41", type: "route", xPct: 47, yPct: 86, title: "Route 41" },
+  { id: "r42", type: "route", xPct: 62, yPct: 34, title: "Route 42" },
+  { id: "r43", type: "route", xPct: 67, yPct: 21, title: "Route 43" },
+  { id: "r44", type: "route", xPct: 74, yPct: 31, title: "Route 44" },
+  { id: "r45", type: "route", xPct: 83, yPct: 44, title: "Route 45" },
+  { id: "r46", type: "route", xPct: 78, yPct: 52, title: "Route 46" },
+  { id: "r47", type: "route", xPct: 52, yPct: 67, title: "Route 47" },
+  { id: "r48", type: "route", xPct: 55, yPct: 56, title: "Route 48" }
 ];
 
 function buildMapStations(gameKey) {
   const g = getGame(gameKey);
-  return JOHTO_HOTSPOTS.map((pos, i) => ({
-    ...pos,
-    n: i + 1,
-    label: g.badgeNames[i],
-    cap: g.badgeCaps[i]
-  }));
+  const gymNames = g.badgeNames;
+  const caps = g.badgeCaps;
+
+  return JOHTO_MAP_POINTS.map(point => {
+    if (point.type === "gym") {
+      const idx = Math.max(0, (point.order || 1) - 1);
+      return {
+        ...point,
+        label: gymNames[idx] || point.title,
+        cap: caps[idx]
+      };
+    }
+    return point;
+  });
+}
+
+function mapTypeLabel(type) {
+  if (type === "gym") return "Arena";
+  if (type === "route") return "Route";
+  if (type === "town") return "Stadt";
+  return "Ort";
+}
+
+function markerText(point) {
+  if (point.type === "gym") return String(point.order);
+  if (point.type === "route") return point.title.replace("Route ", "");
+  if (point.type === "town") return "●";
+  return "◆";
+}
+
+function mapPointDetails(point) {
+  const parts = [`<strong>${escapeHtml(point.title)}</strong>`];
+  if (point.subtitle) parts.push(`<span>${escapeHtml(point.subtitle)}</span>`);
+  parts.push(`<span>Typ: ${mapTypeLabel(point.type)}</span>`);
+  if (point.type === "gym") parts.push(`<span>Orden #${point.order} · Level-Cap: Lv ${point.cap}</span>`);
+  if (point.type === "route") parts.push(`<span>Route/Encounter-Ort: für Nuzlocke-Catches markieren.</span>`);
+  return parts.join("<br>");
 }
 
 function openMap() {
   mapGameLabel.textContent = `${getGame(currentGame).label} – Johto`;
-  mapInfoPanel.textContent = "Klicke auf eine Station für Details zu Orden & Level-Cap.";
+  mapInfoPanel.textContent = "Klicke auf Arena, Stadt, Route oder Ort.";
   mapModal.classList.remove("hidden");
 
   mapImageContainer.innerHTML = "";
@@ -720,39 +798,41 @@ function openMap() {
   const hotspotLayer = document.createElement("div");
   hotspotLayer.className = "mapHotspotLayer";
 
-  buildMapStations(currentGame).forEach(station => {
+  buildMapStations(currentGame).forEach(point => {
     const spot = document.createElement("button");
     spot.type = "button";
-    spot.className = "mapHotspot";
-    spot.style.left = `${station.xPct}%`;
-    spot.style.top = `${station.yPct}%`;
-    spot.textContent = String(station.n);
-    spot.dataset.name = station.label;
-    spot.dataset.cap = station.cap;
-    spot.dataset.n = station.n;
+    spot.className = `mapHotspot mapHotspot-${point.type}`;
+    spot.style.left = `${point.xPct}%`;
+    spot.style.top = `${point.yPct}%`;
+    spot.textContent = markerText(point);
+    spot.title = `${point.title}${point.cap ? ` · Cap Lv ${point.cap}` : ""}`;
     spot.addEventListener("click", (event) => {
       event.stopPropagation();
       mapImageContainer.querySelectorAll(".mapHotspot.selected").forEach(el => el.classList.remove("selected"));
       spot.classList.add("selected");
-      mapInfoPanel.innerHTML = `<strong>#${station.n} – ${escapeHtml(station.label)}</strong><br>Level-Cap: Lv ${station.cap}`;
+      mapInfoPanel.innerHTML = mapPointDetails(point);
     });
     hotspotLayer.appendChild(spot);
   });
 
+  const legend = document.createElement("div");
+  legend.className = "mapLegend";
+  legend.innerHTML = `
+    <span><b class="legendGym"></b>Arena</span>
+    <span><b class="legendTown"></b>Stadt</span>
+    <span><b class="legendRoute"></b>Route</span>
+    <span><b class="legendPlace"></b>Ort</span>
+  `;
+
   const notice = document.createElement("div");
   notice.className = "mapImageMissingNotice";
-  notice.innerHTML = `Kein eigenes Kartenbild gefunden.<br>Lege deine eigene Grafik unter <code>public${MAP_IMAGE_PATH}</code> ab (z.B. ein selbst erstellter Screenshot deiner Johto-Karte aus dem Spiel) - danach erscheint sie hier automatisch mit den anklickbaren Stationen.`;
+  notice.innerHTML = `Kein Kartenbild gefunden.<br>Lege <code>public${MAP_IMAGE_PATH}</code> ab.`;
 
-  img.addEventListener("error", () => {
-    mapImageContainer.classList.add("missing");
-  }, { once: true });
-  img.addEventListener("load", () => {
-    mapImageContainer.classList.remove("missing");
-  }, { once: true });
+  img.addEventListener("error", () => mapImageContainer.classList.add("missing"), { once: true });
+  img.addEventListener("load", () => mapImageContainer.classList.remove("missing"), { once: true });
 
-  mapImageContainer.append(img, hotspotLayer, notice);
+  mapImageContainer.append(img, hotspotLayer, legend, notice);
 }
-
 function closeMap() {
   mapModal.classList.add("hidden");
 }
