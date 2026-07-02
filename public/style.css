@@ -1095,3 +1095,78 @@ body.spotlight .tile:not(.spotlightMain):hover {
     flex-direction: column;
   }
 }
+
+
+/* v10.1 Links as modal */
+.linksModal {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0,0,0,.66);
+}
+
+.linksModal.hidden {
+  display: none;
+}
+
+.linksModalInner {
+  width: min(1320px, calc(100vw - 36px));
+  max-height: calc(100vh - 56px);
+  overflow: auto;
+  padding: 16px;
+  border-radius: 16px;
+  background: #14141f;
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 22px 90px rgba(0,0,0,.65);
+}
+
+#closeLinksBtn {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  padding: 0;
+  background: rgba(255,255,255,.12);
+  color: white;
+}
+
+.linksModal .linkTrackerHeader {
+  position: sticky;
+  top: -16px;
+  z-index: 5;
+  background: #14141f;
+  padding: 0 0 12px;
+}
+
+.linkPokemonEditor {
+  z-index: 20000;
+  width: 320px;
+}
+
+.linkPokemonEditor input,
+.linkPokemonEditor select,
+.linkPokemonEditor button {
+  pointer-events: auto;
+}
+
+.linkPokemonCell {
+  cursor: pointer;
+}
+
+.linkPokemonCell:hover {
+  outline: 2px solid rgba(123, 44, 255, .45);
+}
+
+@media (max-width: 900px) {
+  .linksModal {
+    padding: 8px;
+  }
+
+  .linksModalInner {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
+}

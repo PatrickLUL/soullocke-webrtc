@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v10-links";
+const APP_VERSION = "v10.1-links";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -12,6 +12,7 @@ const debugToggleBtn = document.querySelector("#debugToggleBtn");
 const exportBtn = document.querySelector("#exportBtn");
 const gameSelect = document.querySelector("#gameSelect");
 const mapBtn = document.querySelector("#mapBtn");
+const linksBtn = document.querySelector("#linksBtn");
 const spotlightBtn = document.querySelector("#spotlightBtn");
 const closeMapBtn = document.querySelector("#closeMapBtn");
 const mapModal = document.querySelector("#mapModal");
@@ -25,7 +26,9 @@ const statusEl = document.querySelector("#status");
 const grid = document.querySelector("#grid");
 const tileTemplate = document.querySelector("#tileTemplate");
 const pokemonSuggestions = document.querySelector("#pokemonSuggestions");
-const linkTrackerSection = document.querySelector("#linkTracker");
+const linksModal = document.querySelector("#linksModal");
+const closeLinksBtn = document.querySelector("#closeLinksBtn");
+const linkTrackerSection = linksModal;
 const linkTable = document.querySelector("#linkTable");
 const addLinkRowBtn = document.querySelector("#addLinkRowBtn");
 const exportLinksBtn = document.querySelector("#exportLinksBtn");
@@ -1475,7 +1478,7 @@ function renderLinkTracker() {
   if (!linkTrackerSection || !linkTable) return;
 
   const orderedPlayers = [...players.values()].sort((a, b) => a.joinedAt - b.joinedAt);
-  linkTrackerSection.classList.toggle("hidden", !joined && !linkRows.length);
+  // Modal visibility is controlled by the Links button, not by renderLinkTracker().
 
   if (!orderedPlayers.length) {
     linkTable.innerHTML = `<div class="linkEmpty">Tritt einem Raum bei, um den SoulLink-Tracker zu benutzen.</div>`;
@@ -1586,14 +1589,15 @@ function closeLinkPokemonEditor() {
 function positionLinkEditor(pop, anchorEl) {
   const rect = anchorEl.getBoundingClientRect();
   document.body.appendChild(pop);
+
   const popRect = pop.getBoundingClientRect();
   let top = rect.bottom + 8;
   let left = rect.left;
 
-  if (left + popRect.width > window.innerWidth - 10) left = window.innerWidth - popRect.width - 10;
-  if (left < 10) left = 10;
-  if (top + popRect.height > window.innerHeight - 10) top = rect.top - popRect.height - 8;
-  if (top < 10) top = 10;
+  if (left + popRect.width > window.innerWidth - 12) left = window.innerWidth - popRect.width - 12;
+  if (left < 12) left = 12;
+  if (top + popRect.height > window.innerHeight - 12) top = rect.top - popRect.height - 8;
+  if (top < 12) top = 12;
 
   pop.style.left = `${left}px`;
   pop.style.top = `${top}px`;
@@ -1676,6 +1680,7 @@ function openLinkPokemonEditor(anchorEl, rowId, playerId) {
 
 function addLinkRow(location = "") {
   setLinkRows([...linkRows, makeEmptyLinkRow(location)]);
+  openLinksModal();
 }
 
 function exportLinksJson() {
@@ -2039,6 +2044,25 @@ exportBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+
+function openLinksModal() {
+  if (!linksModal) return;
+  renderLinkTracker();
+  linksModal.classList.remove("hidden");
+}
+
+function closeLinksModal() {
+  if (!linksModal) return;
+  linksModal.classList.add("hidden");
+  closeLinkPokemonEditor();
+}
+
+if (linksBtn) linksBtn.addEventListener("click", openLinksModal);
+if (closeLinksBtn) closeLinksBtn.addEventListener("click", closeLinksModal);
+if (linksModal) linksModal.addEventListener("click", (event) => {
+  if (event.target === linksModal) closeLinksModal();
+});
+
 if (addLinkRowBtn) addLinkRowBtn.addEventListener("click", () => addLinkRow());
 if (exportLinksBtn) exportLinksBtn.addEventListener("click", exportLinksJson);
 
@@ -2061,6 +2085,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeSlotPopover();
     closeLinkPokemonEditor();
+    if (linksModal && !linksModal.classList.contains("hidden")) closeLinksModal();
     if (settingsPanel) settingsPanel.classList.add("hidden");
   }
 });

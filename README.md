@@ -1,23 +1,16 @@
-# Soullocke WebRTC v10-links
+# Soullocke WebRTC v10.1-links
 
-Neu:
-- SoulLink-Tracker unter dem Stream.
-- Eine Zeile = ein gemeinsamer Encounter/Link-Ort.
-- Spieler werden automatisch aus dem Raum übernommen.
-- Pokémon-Feld anklicken öffnet Editor-Popup.
-- Ort direkt in der Zeile auswählbar/eintippbar.
-- Status pro Pokémon: Lebendig, Besiegt, Box, Bro-Failed.
-- Zeilenfarbe:
-  - Grün = Link lebt
-  - Rot = besiegt/failed
-  - Gelb = Box
-- Links werden per Socket.io im Raum synchronisiert.
-- Link-Export als JSON.
-- Deine manuell angepassten Johto-Map-Marker sind als Default eingebaut.
+Fix/Neu:
+- SoulLink Tracker ist jetzt ein Popup/Modal über der Seite.
+- Neuer Button oben: `Links`.
+- Tracker nimmt keinen Platz mehr unter dem Stream weg.
+- Pokémon-Auswahl-Popup liegt jetzt sicher über allem.
+- Escape schließt Popup/Modal.
+- Deine Johto-Map-Positionen bleiben eingebaut.
 
 Deploy:
 ```bash
 git add .
-git commit -m "add soullink tracker"
+git commit -m "move soullink tracker to modal"
 git push
 ```
