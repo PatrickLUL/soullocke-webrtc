@@ -833,3 +833,265 @@ body.spotlight .tile:not(.spotlightMain):hover {
   font-size: calc(var(--node-size, 22px) * .42);
   font-weight: 800;
 }
+
+
+/* v10 SoulLink Tracker */
+.linkTracker {
+  margin: 14px auto 28px;
+  width: min(1400px, calc(100vw - 24px));
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(20, 20, 31, .94);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 18px 70px rgba(0,0,0,.35);
+}
+
+.linkTracker.hidden {
+  display: none;
+}
+
+.linkTrackerHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.linkTrackerHeader h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.linkTrackerHeader p {
+  margin: 4px 0 0;
+  opacity: .68;
+  font-size: 13px;
+}
+
+.linkTrackerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.linkTrackerActions button {
+  background: linear-gradient(135deg, #327dff, #7b2cff);
+  color: white;
+  border: 1px solid rgba(255,255,255,.15);
+}
+
+.linkTable {
+  display: grid;
+  gap: 8px;
+}
+
+.linkGrid {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) repeat(var(--player-count), minmax(180px, 1.2fr)) 96px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.linkHeader {
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255,255,255,.72);
+}
+
+.linkRows {
+  display: grid;
+  gap: 8px;
+}
+
+.linkRow {
+  padding: 8px;
+  border-radius: 14px;
+  border-left: 4px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.055);
+}
+
+.linkRow-good {
+  border-left-color: #20c76a;
+  background: rgba(32,199,106,.13);
+}
+
+.linkRow-bad {
+  border-left-color: #e83c55;
+  background: rgba(232,60,85,.16);
+}
+
+.linkRow-box {
+  border-left-color: #f2b84b;
+  background: rgba(242,184,75,.14);
+}
+
+.linkLocationCell input,
+.linkPokemonEditor input,
+.linkPokemonEditor select {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.94);
+  color: #111;
+  border-radius: 9px;
+}
+
+.linkLocationInput {
+  height: 100%;
+  min-height: 54px;
+  font-weight: 800;
+}
+
+.linkPokemonCell {
+  min-height: 54px;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 3px;
+  align-items: center;
+  text-align: left;
+  background: rgba(255,255,255,.92);
+  color: #1d2432;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-weight: 750;
+}
+
+.linkPokemonCell.empty {
+  color: #7c8797;
+  font-weight: 700;
+}
+
+.linkPokemonCell.status-alive {
+  background: rgba(229, 255, 238, .96);
+}
+
+.linkPokemonCell.status-dead,
+.linkPokemonCell.status-failed {
+  background: rgba(255, 223, 226, .96);
+}
+
+.linkPokemonCell.status-box {
+  background: rgba(255, 246, 218, .96);
+}
+
+.linkPokemonMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.linkPokemonMain img {
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
+.linkPokemonMain strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linkPokemonMeta {
+  font-size: 11px;
+  opacity: .72;
+}
+
+.linkPokemonMeta small::before {
+  content: " · ";
+}
+
+.linkPokemonPlaceholder {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.linkActionsCell {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.linkActionsCell button {
+  flex: 1;
+  min-width: 0;
+  padding: 6px;
+  font-size: 13px;
+  background: rgba(255,255,255,.12);
+  color: white;
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.linkActionsCell button:disabled {
+  opacity: .35;
+}
+
+.linkDeleteBtn {
+  background: rgba(232,60,85,.8) !important;
+}
+
+.linkPokemonEditor {
+  position: fixed;
+  z-index: 10000;
+  width: 280px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #171725;
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 18px 70px rgba(0,0,0,.5);
+}
+
+.linkEditorTitle {
+  font-weight: 900;
+  color: white;
+}
+
+.linkEditorButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.linkClearPokemon {
+  background: #333342;
+  color: white;
+}
+
+.linkSavePokemon {
+  background: #21a957;
+  color: white;
+}
+
+.linkEmpty {
+  opacity: .65;
+  padding: 18px;
+  text-align: center;
+  border: 1px dashed rgba(255,255,255,.2);
+  border-radius: 12px;
+}
+
+@media (max-width: 900px) {
+  .linkGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .linkHeader {
+    display: none;
+  }
+
+  .linkActionsCell {
+    min-height: 42px;
+  }
+
+  .linkTrackerHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

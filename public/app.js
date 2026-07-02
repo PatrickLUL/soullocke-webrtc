@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v9.2-map-editor";
+const APP_VERSION = "v10-links";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -25,6 +25,11 @@ const statusEl = document.querySelector("#status");
 const grid = document.querySelector("#grid");
 const tileTemplate = document.querySelector("#tileTemplate");
 const pokemonSuggestions = document.querySelector("#pokemonSuggestions");
+const linkTrackerSection = document.querySelector("#linkTracker");
+const linkTable = document.querySelector("#linkTable");
+const addLinkRowBtn = document.querySelector("#addLinkRowBtn");
+const exportLinksBtn = document.querySelector("#exportLinksBtn");
+const linkLocationSuggestions = document.querySelector("#linkLocationSuggestions");
 
 let myId = "";
 let roomId = "";
@@ -41,6 +46,7 @@ const frameCounters = new Map();
 const lastStats = new Map();
 const teams = new Map();
 const badges = new Map();
+let linkRows = [];
 let currentGame = "hgss";
 
 const POKEMON_MAP = {
@@ -468,6 +474,7 @@ function openSlotPopover(anchorEl, index) {
   const alreadyOpenForThisSlot = document.querySelector(".slotPopover")?.dataset.kind === "team" &&
     document.querySelector(".slotPopover")?.dataset.index === String(index);
   closeSlotPopover();
+  closeLinkPokemonEditor();
   if (alreadyOpenForThisSlot) return;
 
   const roster = getRoster(myId);
@@ -1400,6 +1407,298 @@ gameSelect.addEventListener("change", () => {
   if (!mapModal.classList.contains("hidden")) openMap();
 });
 
+
+const DEFAULT_LINK_LOCATIONS = [
+  "Starter",
+  "Route 29", "Route 30", "Route 31", "Route 32", "Route 33", "Route 34", "Route 35", "Route 36", "Route 37", "Route 38", "Route 39",
+  "Route 40", "Route 41", "Route 42", "Route 43", "Route 44", "Route 45", "Route 46", "Route 47", "Route 48",
+  "New Bark Town", "Cherrygrove City", "Violet City", "Azalea Town", "Goldenrod City", "Ecruteak City", "Olivine City",
+  "Cianwood City", "Mahogany Town", "Blackthorn City",
+  "Dark Cave", "Sprout Tower", "Ruins of Alph", "Union Cave", "Slowpoke Well", "Ilex Forest", "National Park",
+  "Burned Tower", "Tin Tower", "Whirl Islands", "Mt. Mortar", "Lake of Rage", "Team Rocket HQ", "Ice Path", "Dragon's Den",
+  "Safari Zone", "Cliff Cave", "Embedded Tower"
+];
+
+function setupLinkLocationSuggestions() {
+  if (!linkLocationSuggestions) return;
+  linkLocationSuggestions.innerHTML = DEFAULT_LINK_LOCATIONS
+    .map(name => `<option value="${escapeHtml(name)}"></option>`)
+    .join("");
+}
+
+function makeEmptyLinkRow(location = "") {
+  return {
+    id: `link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    location,
+    entries: {}
+  };
+}
+
+function normalizeLinkRows(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map(row => ({
+    id: row.id || `link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    location: String(row.location || ""),
+    entries: row.entries && typeof row.entries === "object" ? row.entries : {}
+  }));
+}
+
+function getLinkEntry(row, playerId) {
+  return row.entries?.[playerId] || { pokemon: "", status: "empty", nickname: "" };
+}
+
+function setLinkRows(nextRows, shouldSync = true) {
+  linkRows = normalizeLinkRows(nextRows);
+  renderLinkTracker();
+  if (shouldSync && joined) socket.emit("update-links", { links: linkRows });
+}
+
+function getLinkRowClass(row) {
+  const entries = Object.values(row.entries || {});
+  if (!entries.length || entries.every(e => !e.pokemon)) return "linkRow-empty";
+  if (entries.some(e => e.status === "dead" || e.status === "failed")) return "linkRow-bad";
+  if (entries.some(e => e.status === "box")) return "linkRow-box";
+  return "linkRow-good";
+}
+
+function getStatusLabel(status) {
+  return {
+    alive: "Lebendig",
+    dead: "Besiegt",
+    box: "Box",
+    failed: "Bro-Failed",
+    empty: "Leer"
+  }[status || "empty"] || status;
+}
+
+function renderLinkTracker() {
+  if (!linkTrackerSection || !linkTable) return;
+
+  const orderedPlayers = [...players.values()].sort((a, b) => a.joinedAt - b.joinedAt);
+  linkTrackerSection.classList.toggle("hidden", !joined && !linkRows.length);
+
+  if (!orderedPlayers.length) {
+    linkTable.innerHTML = `<div class="linkEmpty">Tritt einem Raum bei, um den SoulLink-Tracker zu benutzen.</div>`;
+    return;
+  }
+
+  const header = document.createElement("div");
+  header.className = "linkGrid linkHeader";
+  header.style.setProperty("--player-count", String(orderedPlayers.length));
+  header.innerHTML = `<div>Ort / Link</div>` + orderedPlayers.map(p => `<div>${escapeHtml(p.name)}</div>`).join("") + `<div></div>`;
+
+  const body = document.createElement("div");
+  body.className = "linkRows";
+
+  linkRows.forEach((row, rowIndex) => {
+    const line = document.createElement("div");
+    line.className = `linkGrid linkRow ${getLinkRowClass(row)}`;
+    line.style.setProperty("--player-count", String(orderedPlayers.length));
+    line.dataset.rowId = row.id;
+
+    const locationCell = document.createElement("div");
+    locationCell.className = "linkLocationCell";
+    locationCell.innerHTML = `
+      <input class="linkLocationInput" value="${escapeHtml(row.location || "")}" placeholder="Ort auswählen..." list="linkLocationSuggestions">
+    `;
+    const locationInput = locationCell.querySelector(".linkLocationInput");
+    locationInput.addEventListener("change", () => {
+      linkRows[rowIndex].location = locationInput.value.trim();
+      setLinkRows(linkRows);
+    });
+    locationInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        locationInput.blur();
+      }
+    });
+    line.appendChild(locationCell);
+
+    orderedPlayers.forEach(player => {
+      const entry = getLinkEntry(row, player.id);
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = `linkPokemonCell status-${entry.status || "empty"} ${entry.pokemon ? "" : "empty"}`;
+      cell.title = entry.pokemon ? `${entry.pokemon} – ${getStatusLabel(entry.status)}` : "Pokémon auswählen";
+      cell.innerHTML = renderLinkPokemonCell(entry);
+      cell.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openLinkPokemonEditor(cell, row.id, player.id);
+      });
+      line.appendChild(cell);
+    });
+
+    const actions = document.createElement("div");
+    actions.className = "linkActionsCell";
+    actions.innerHTML = `
+      <button class="linkMoveBtn" type="button" title="Nach oben">↑</button>
+      <button class="linkMoveBtn" type="button" title="Nach unten">↓</button>
+      <button class="linkDeleteBtn" type="button" title="Link löschen">×</button>
+    `;
+    const [upBtn, downBtn, deleteBtn] = actions.querySelectorAll("button");
+    upBtn.disabled = rowIndex === 0;
+    downBtn.disabled = rowIndex === linkRows.length - 1;
+    upBtn.addEventListener("click", () => {
+      if (rowIndex <= 0) return;
+      const next = linkRows.slice();
+      [next[rowIndex - 1], next[rowIndex]] = [next[rowIndex], next[rowIndex - 1]];
+      setLinkRows(next);
+    });
+    downBtn.addEventListener("click", () => {
+      if (rowIndex >= linkRows.length - 1) return;
+      const next = linkRows.slice();
+      [next[rowIndex + 1], next[rowIndex]] = [next[rowIndex], next[rowIndex + 1]];
+      setLinkRows(next);
+    });
+    deleteBtn.addEventListener("click", () => {
+      if (!confirm(`Link "${row.location || "ohne Ort"}" löschen?`)) return;
+      setLinkRows(linkRows.filter(r => r.id !== row.id));
+    });
+    line.appendChild(actions);
+
+    body.appendChild(line);
+  });
+
+  linkTable.innerHTML = "";
+  linkTable.append(header, body);
+}
+
+function renderLinkPokemonCell(entry) {
+  if (!entry || !entry.pokemon) {
+    return `<span class="linkPokemonPlaceholder">Pokémon wählen</span>`;
+  }
+
+  const sprite = tinySpriteUrl(entry.pokemon);
+  const nickname = entry.nickname ? `<small>${escapeHtml(entry.nickname)}</small>` : "";
+  return `
+    <span class="linkPokemonMain">
+      <img src="${sprite}" alt="" onerror="this.style.visibility='hidden'">
+      <strong>${escapeHtml(entry.pokemon)}</strong>
+    </span>
+    <span class="linkPokemonMeta">${getStatusLabel(entry.status)}${nickname}</span>
+  `;
+}
+
+function closeLinkPokemonEditor() {
+  const existing = document.querySelector(".linkPokemonEditor");
+  if (existing) existing.remove();
+}
+
+function positionLinkEditor(pop, anchorEl) {
+  const rect = anchorEl.getBoundingClientRect();
+  document.body.appendChild(pop);
+  const popRect = pop.getBoundingClientRect();
+  let top = rect.bottom + 8;
+  let left = rect.left;
+
+  if (left + popRect.width > window.innerWidth - 10) left = window.innerWidth - popRect.width - 10;
+  if (left < 10) left = 10;
+  if (top + popRect.height > window.innerHeight - 10) top = rect.top - popRect.height - 8;
+  if (top < 10) top = 10;
+
+  pop.style.left = `${left}px`;
+  pop.style.top = `${top}px`;
+}
+
+function openLinkPokemonEditor(anchorEl, rowId, playerId) {
+  closeLinkPokemonEditor();
+
+  const row = linkRows.find(r => r.id === rowId);
+  if (!row) return;
+
+  const entry = getLinkEntry(row, playerId);
+
+  const pop = document.createElement("div");
+  pop.className = "linkPokemonEditor";
+  pop.innerHTML = `
+    <div class="linkEditorTitle">Pokémon auswählen</div>
+    <input class="linkPokemonInput" placeholder="z.B. glumanda" list="pokemonSuggestions" autocomplete="off" value="${escapeHtml(entry.pokemon || "")}">
+    <input class="linkNicknameInput" placeholder="Spitzname optional" value="${escapeHtml(entry.nickname || "")}">
+    <select class="linkStatusInput">
+      <option value="alive">Lebendig</option>
+      <option value="dead">Besiegt</option>
+      <option value="box">Box</option>
+      <option value="failed">Bro-Failed</option>
+    </select>
+    <div class="linkEditorButtons">
+      <button class="linkClearPokemon" type="button">Leeren</button>
+      <button class="linkSavePokemon" type="button">Speichern</button>
+    </div>
+  `;
+
+  const pokemonInput = pop.querySelector(".linkPokemonInput");
+  const nicknameInput = pop.querySelector(".linkNicknameInput");
+  const statusInput = pop.querySelector(".linkStatusInput");
+  statusInput.value = entry.status && entry.status !== "empty" ? entry.status : "alive";
+
+  function saveEntry() {
+    const pokemon = normalizePokemonName(pokemonInput.value);
+    const nextRows = linkRows.map(r => {
+      if (r.id !== rowId) return r;
+      return {
+        ...r,
+        entries: {
+          ...(r.entries || {}),
+          [playerId]: pokemon ? {
+            pokemon,
+            nickname: nicknameInput.value.trim(),
+            status: statusInput.value
+          } : { pokemon: "", nickname: "", status: "empty" }
+        }
+      };
+    });
+    setLinkRows(nextRows);
+    closeLinkPokemonEditor();
+  }
+
+  function clearEntry() {
+    const nextRows = linkRows.map(r => {
+      if (r.id !== rowId) return r;
+      const nextEntries = { ...(r.entries || {}) };
+      delete nextEntries[playerId];
+      return { ...r, entries: nextEntries };
+    });
+    setLinkRows(nextRows);
+    closeLinkPokemonEditor();
+  }
+
+  pop.querySelector(".linkSavePokemon").addEventListener("click", saveEntry);
+  pop.querySelector(".linkClearPokemon").addEventListener("click", clearEntry);
+  pop.addEventListener("click", (event) => event.stopPropagation());
+  pokemonInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") saveEntry();
+    if (event.key === "Escape") closeLinkPokemonEditor();
+  });
+
+  positionLinkEditor(pop, anchorEl);
+  pokemonInput.focus();
+  pokemonInput.select();
+}
+
+function addLinkRow(location = "") {
+  setLinkRows([...linkRows, makeEmptyLinkRow(location)]);
+}
+
+function exportLinksJson() {
+  const orderedPlayers = [...players.values()].sort((a, b) => a.joinedAt - b.joinedAt);
+  const data = {
+    room: roomId,
+    game: currentGame,
+    exportedAt: new Date().toISOString(),
+    players: orderedPlayers.map(p => ({ id: p.id, name: p.name })),
+    links: linkRows
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `soullocke-links-${roomId || "raum"}-${Date.now()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+
 function rebuildTiles() {
   tiles.clear();
   grid.innerHTML = "";
@@ -1740,6 +2039,10 @@ exportBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+if (addLinkRowBtn) addLinkRowBtn.addEventListener("click", () => addLinkRow());
+if (exportLinksBtn) exportLinksBtn.addEventListener("click", exportLinksJson);
+
+
 document.body.addEventListener("click", (event) => {
   for (const id of activeStreams.keys()) resumeVideo(id);
 
@@ -1757,6 +2060,7 @@ document.body.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeSlotPopover();
+    closeLinkPokemonEditor();
     if (settingsPanel) settingsPanel.classList.add("hidden");
   }
 });
@@ -1775,12 +2079,14 @@ socket.on("joined", data => {
   badges.clear();
   if (data.badges) for (const [id, count] of Object.entries(data.badges)) badges.set(id, count);
   currentGame = data.game || "hgss";
+  linkRows = normalizeLinkRows(data.links || []);
   gameSelect.value = currentGame;
 
   joinBtn.disabled = true;
   shareBtn.disabled = false;
   exportBtn.disabled = false;
   rebuildTiles();
+  renderLinkTracker();
   ensureAllPeers();
 
   setStatus(`${APP_VERSION}: Verbunden. Link: ${location.origin}/room/${encodeURIComponent(roomId)}`);
@@ -1793,6 +2099,7 @@ socket.on("players", list => {
   for (const p of list) players.set(p.id, p);
   rebuildTiles();
   renderAllSpriteBars();
+  renderLinkTracker();
   ensureAllPeers();
 });
 
@@ -1813,6 +2120,11 @@ socket.on("game-changed", ({ game }) => {
   gameSelect.value = currentGame;
   renderAllSpriteBars();
   if (!mapModal.classList.contains("hidden")) openMap();
+});
+
+socket.on("links", data => {
+  linkRows = normalizeLinkRows(data || []);
+  renderLinkTracker();
 });
 
 socket.on("peer-stopped-sharing", ({ peerId }) => clearStreamFromTile(peerId));
@@ -1917,4 +2229,6 @@ if (roomFromUrl) roomInput.value = roomFromUrl;
 nameInput.value = localStorage.getItem("soullockeName") || "";
 qualitySelect.value = localStorage.getItem("soullockeQuality") || "medium";
 setupPokemonSuggestions();
+setupLinkLocationSuggestions();
+renderLinkTracker();
 rebuildTiles();

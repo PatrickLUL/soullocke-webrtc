@@ -28,6 +28,7 @@ function getRoom(roomId) {
       players: new Map(),
       teams: {},
       badges: {},
+      links: [],
       game: "hgss"
     });
   }
@@ -141,6 +142,18 @@ io.on("connection", socket => {
       room.game = game;
       io.to(roomId).emit("game-changed", { game: room.game });
     }
+  });
+
+  socket.on("update-links", ({ links }) => {
+    const roomId = socket.data.roomId;
+    if (!roomId) return;
+    const room = getRoom(roomId);
+    room.links = Array.isArray(links) ? links.slice(0, 200).map(row => ({
+      id: String(row.id || "").slice(0, 80),
+      location: String(row.location || "").slice(0, 80),
+      entries: row.entries && typeof row.entries === "object" ? row.entries : {}
+    })) : [];
+    io.to(roomId).emit("links", room.links);
   });
 
   socket.on("quality-changed", ({ quality }) => {

@@ -1,21 +1,23 @@
-# Soullocke WebRTC v9.2-map-editor
+# Soullocke WebRTC v10-links
 
 Neu:
-- Keine globale Node-Größe mehr.
-- Jeder Marker hat eigene Größe.
-- Jeder Marker hat eigene Form:
-  - Kreis
-  - Quadrat
-  - Abgerundet
-  - Rechteck
-  - Pille
-  - Diamant
-- Live-Vorschau im Marker-Editor.
-- Export JSON enthält `size` und `shape`.
+- SoulLink-Tracker unter dem Stream.
+- Eine Zeile = ein gemeinsamer Encounter/Link-Ort.
+- Spieler werden automatisch aus dem Raum übernommen.
+- Pokémon-Feld anklicken öffnet Editor-Popup.
+- Ort direkt in der Zeile auswählbar/eintippbar.
+- Status pro Pokémon: Lebendig, Besiegt, Box, Bro-Failed.
+- Zeilenfarbe:
+  - Grün = Link lebt
+  - Rot = besiegt/failed
+  - Gelb = Box
+- Links werden per Socket.io im Raum synchronisiert.
+- Link-Export als JSON.
+- Deine manuell angepassten Johto-Map-Marker sind als Default eingebaut.
 
 Deploy:
 ```bash
 git add .
-git commit -m "add individual map marker size and shape"
+git commit -m "add soullink tracker"
 git push
 ```
