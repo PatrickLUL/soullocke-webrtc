@@ -1,19 +1,21 @@
-# Soullocke WebRTC v9.1-map-editor
+# Soullocke WebRTC v9.2-map-editor
 
 Neu:
-- Node-Größe ist über Slider einstellbar.
-- Arena und Stadt sind jetzt ein gemeinsamer Typ: `Arena/Stadt`.
-- Es gibt weiterhin normale `Stadt`-Nodes.
-- Jeder Marker hat `encounterDone`.
-- Grün = Encounter offen.
-- Rot = Encounter verbraucht.
-- Marker-Editor hat Toggle für Encounter verbraucht.
-- Außerhalb vom Editor kann man beim ausgewählten Marker schnell Encounter offen/verbraucht toggeln.
-- Export JSON enthält die Encounter-Werte.
+- Keine globale Node-Größe mehr.
+- Jeder Marker hat eigene Größe.
+- Jeder Marker hat eigene Form:
+  - Kreis
+  - Quadrat
+  - Abgerundet
+  - Rechteck
+  - Pille
+  - Diamant
+- Live-Vorschau im Marker-Editor.
+- Export JSON enthält `size` und `shape`.
 
 Deploy:
 ```bash
 git add .
-git commit -m "improve map nodes and encounters"
+git commit -m "add individual map marker size and shape"
 git push
 ```

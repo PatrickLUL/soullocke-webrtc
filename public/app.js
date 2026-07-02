@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v9.1-map-editor";
+const APP_VERSION = "v9.2-map-editor";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -683,7 +683,7 @@ function escapeHtml(value) {
 // Die Koordinaten sind Prozentwerte relativ zur Karten-Grafik.
 // Änderungen im Editor werden lokal im Browser gespeichert und können als JSON exportiert werden.
 const MAP_IMAGE_PATH = "/map-johto.png";
-const MAP_STORAGE_KEY = "soullockeJohtoMapMarkersV2";
+const MAP_STORAGE_KEY = "soullockeJohtoMapMarkersV3";
 
 const DEFAULT_JOHTO_MARKERS = [
   { id: "badge-1", type: "gymcity", n: 1, name: "Violet City / Falkner", cap: 13, encounterDone: false, xPct: 18, yPct: 30 },
@@ -737,14 +737,38 @@ function loadMapMarkers() {
     const saved = JSON.parse(localStorage.getItem(MAP_STORAGE_KEY) || "null");
     if (Array.isArray(saved) && saved.length) return saved.map(normalizeMapMarker);
   } catch {}
-  return structuredClone(DEFAULT_JOHTO_MARKERS);
+  return structuredClone(DEFAULT_JOHTO_MARKERS).map(normalizeMapMarker);
 }
 
 function normalizeMapMarker(marker) {
   const normalized = { ...marker };
   if (normalized.type === "badge") normalized.type = "gymcity";
   if (typeof normalized.encounterDone !== "boolean") normalized.encounterDone = false;
+  if (!normalized.shape) normalized.shape = getDefaultShapeForType(normalized.type);
+  if (!normalized.size) normalized.size = getDefaultSizeForType(normalized.type);
   return normalized;
+}
+
+function getDefaultSizeForType(type) {
+  if (type === "route") return 22;
+  if (type === "city") return 22;
+  if (type === "gymcity") return 24;
+  return 22;
+}
+
+function getDefaultShapeForType(type) {
+  if (type === "city") return "circle";
+  if (type === "route") return "rect";
+  if (type === "gymcity") return "rounded";
+  return "diamond";
+}
+
+function getMarkerSize(marker) {
+  return Number(marker.size || getDefaultSizeForType(marker.type));
+}
+
+function getMarkerShape(marker) {
+  return marker.shape || getDefaultShapeForType(marker.type);
 }
 
 function saveMapMarkers() {
@@ -806,6 +830,9 @@ function renderMapEditorPanel(marker) {
     `;
   }
 
+  const markerSize = getMarkerSize(marker);
+  const markerShape = getMarkerShape(marker);
+
   return `
     <div class="mapEditorPanel">
       <strong>Marker bearbeiten</strong>
@@ -823,10 +850,29 @@ function renderMapEditorPanel(marker) {
       <label>Level-Cap
         <input id="mapEditCap" value="${marker.cap || ""}" placeholder="optional">
       </label>
+      <label>Größe
+        <div class="mapMarkerSizeRow">
+          <input id="mapEditSize" type="range" min="12" max="46" value="${markerSize}">
+          <span id="mapEditSizeValue">${markerSize}px</span>
+        </div>
+      </label>
+      <label>Form
+        <select id="mapEditShape">
+          <option value="circle" ${markerShape === "circle" ? "selected" : ""}>Kreis</option>
+          <option value="square" ${markerShape === "square" ? "selected" : ""}>Quadrat</option>
+          <option value="rounded" ${markerShape === "rounded" ? "selected" : ""}>Abgerundet</option>
+          <option value="rect" ${markerShape === "rect" ? "selected" : ""}>Rechteck</option>
+          <option value="pill" ${markerShape === "pill" ? "selected" : ""}>Pille</option>
+          <option value="diamond" ${markerShape === "diamond" ? "selected" : ""}>Diamant</option>
+        </select>
+      </label>
       <label class="encounterCheckbox">
         <input id="mapEditEncounter" type="checkbox" ${marker.encounterDone ? "checked" : ""}>
         Encounter verbraucht
       </label>
+      <div class="mapEditorPreviewLine">
+        Vorschau: <span id="mapMarkerPreview" class="mapHotspot mapHotspot-${marker.type} ${marker.encounterDone ? "encounter-done" : "encounter-open"} shape-${markerShape}" style="--node-size:${markerSize}px">${getMarkerSymbol(marker)}</span>
+      </div>
       <div class="mapEditorCoords">X ${marker.xPct.toFixed(2)}% · Y ${marker.yPct.toFixed(2)}%</div>
       <div class="mapEditorActions">
         <button id="mapApplyMarkerBtn" type="button">Übernehmen</button>
@@ -853,6 +899,29 @@ function attachMapEditorPanelEvents(marker) {
 
   const apply = document.querySelector("#mapApplyMarkerBtn");
   const del = document.querySelector("#mapDeleteMarkerBtn");
+  const sizeInput = document.querySelector("#mapEditSize");
+  const sizeValue = document.querySelector("#mapEditSizeValue");
+  const shapeInput = document.querySelector("#mapEditShape");
+  const typeInput = document.querySelector("#mapEditType");
+  const encounterInput = document.querySelector("#mapEditEncounter");
+  const preview = document.querySelector("#mapMarkerPreview");
+
+  const updatePreview = () => {
+    if (!preview) return;
+    const currentSize = Number(sizeInput?.value || getMarkerSize(marker));
+    const currentShape = shapeInput?.value || getMarkerShape(marker);
+    const currentType = typeInput?.value || marker.type;
+    const done = !!encounterInput?.checked;
+
+    if (sizeValue) sizeValue.textContent = `${currentSize}px`;
+    preview.style.setProperty("--node-size", `${currentSize}px`);
+    preview.className = `mapHotspot mapHotspot-${currentType} ${done ? "encounter-done" : "encounter-open"} shape-${currentShape}`;
+  };
+
+  if (sizeInput) sizeInput.oninput = updatePreview;
+  if (shapeInput) shapeInput.onchange = updatePreview;
+  if (typeInput) typeInput.onchange = updatePreview;
+  if (encounterInput) encounterInput.onchange = updatePreview;
 
   if (apply) {
     apply.onclick = () => {
@@ -860,8 +929,9 @@ function attachMapEditorPanelEvents(marker) {
       marker.type = document.querySelector("#mapEditType").value;
       const capValue = document.querySelector("#mapEditCap").value.trim();
       marker.cap = capValue ? Number(capValue) || capValue : "";
-      const encounterInput = document.querySelector("#mapEditEncounter");
-      marker.encounterDone = !!encounterInput?.checked;
+      marker.size = Number(document.querySelector("#mapEditSize").value) || getDefaultSizeForType(marker.type);
+      marker.shape = document.querySelector("#mapEditShape").value || getDefaultShapeForType(marker.type);
+      marker.encounterDone = !!document.querySelector("#mapEditEncounter")?.checked;
       saveMapMarkers();
       openMap();
       selectMapMarker(marker.id);
@@ -894,12 +964,13 @@ function selectMapMarker(markerId) {
 function makeMapHotspot(marker) {
   const spot = document.createElement("button");
   spot.type = "button";
-  spot.className = `mapHotspot mapHotspot-${marker.type} ${marker.encounterDone ? "encounter-done" : "encounter-open"}`;
+  spot.className = `mapHotspot mapHotspot-${marker.type} ${marker.encounterDone ? "encounter-done" : "encounter-open"} shape-${getMarkerShape(marker)}`;
   if (mapEditMode) spot.classList.add("editable");
   spot.style.left = `${marker.xPct}%`;
   spot.style.top = `${marker.yPct}%`;
-  spot.style.setProperty("--node-size", `${mapNodeSize}px`);
+  spot.style.setProperty("--node-size", `${getMarkerSize(marker)}px`);
   spot.textContent = getMarkerSymbol(marker);
+  spot.dataset.symbol = getMarkerSymbol(marker);
   spot.dataset.markerId = marker.id;
   spot.title = `${marker.name}${markerHasEncounter(marker) ? (marker.encounterDone ? " – Encounter verbraucht" : " – Encounter offen") : ""}`;
 
@@ -957,6 +1028,8 @@ function addMapMarker(type = "route") {
     type,
     name: type === "route" ? "Neue Route" : type === "city" ? "Neue Stadt" : type === "gymcity" ? "Neue Arena/Stadt" : "Neuer Ort",
     encounterDone: false,
+    size: getDefaultSizeForType(type),
+    shape: getDefaultShapeForType(type),
     xPct: 50,
     yPct: 50
   };
@@ -976,10 +1049,7 @@ function openMap() {
   toolbar.className = "mapToolbar";
   toolbar.innerHTML = `
     <button id="mapEditToggleBtn" type="button">${mapEditMode ? "Editor: An" : "Editor: Aus"}</button>
-    <label class="mapSizeControl">Größe
-      <input id="mapNodeSizeInput" type="range" min="14" max="34" value="${mapNodeSize}">
-      <span>${mapNodeSize}px</span>
-    </label>
+    <span class="mapSizeHint">Größe/Form pro Marker</span>
     <button id="mapAddRouteBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Route</button>
     <button id="mapAddCityBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Stadt</button>
     <button id="mapAddGymCityBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Arena/Stadt</button>
@@ -1024,13 +1094,6 @@ function openMap() {
     openMap();
   };
 
-  const sizeInput = document.querySelector("#mapNodeSizeInput");
-  sizeInput.oninput = () => {
-    mapNodeSize = Number(sizeInput.value);
-    localStorage.setItem("soullockeMapNodeSize", String(mapNodeSize));
-    mapImageContainer.querySelectorAll(".mapHotspot").forEach(el => el.style.setProperty("--node-size", `${mapNodeSize}px`));
-    sizeInput.nextElementSibling.textContent = `${mapNodeSize}px`;
-  };
 
   document.querySelector("#mapAddRouteBtn").onclick = () => addMapMarker("route");
   document.querySelector("#mapAddCityBtn").onclick = () => addMapMarker("city");

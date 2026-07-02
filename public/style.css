@@ -745,3 +745,91 @@ body.spotlight .tile:not(.spotlightMain):hover {
   padding: 8px 10px;
   font-size: 13px;
 }
+
+
+/* v9.2 individual marker size + shape */
+.mapSizeHint {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.14);
+  font-size: 12px;
+  opacity: .9;
+}
+
+.mapMarkerSizeRow {
+  display: grid;
+  grid-template-columns: 1fr 50px;
+  align-items: center;
+  gap: 8px;
+}
+
+.mapMarkerSizeRow input {
+  padding: 0;
+}
+
+.mapEditorPreviewLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  font-size: 13px;
+  opacity: .9;
+}
+
+.mapEditorPreviewLine .mapHotspot {
+  position: static;
+  transform: none;
+  pointer-events: none;
+}
+
+.mapHotspot.shape-circle {
+  border-radius: 999px;
+}
+
+.mapHotspot.shape-square {
+  border-radius: 4px;
+}
+
+.mapHotspot.shape-rounded {
+  border-radius: 9px;
+}
+
+.mapHotspot.shape-rect {
+  width: calc(var(--node-size, 22px) * 1.45);
+  border-radius: 7px;
+}
+
+.mapHotspot.shape-pill {
+  width: calc(var(--node-size, 22px) * 1.7);
+  border-radius: 999px;
+}
+
+.mapHotspot.shape-diamond {
+  border-radius: 5px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.mapHotspot.shape-diamond:hover,
+.mapHotspot.shape-diamond:focus {
+  transform: translate(-50%, -50%) rotate(45deg) scale(1.12);
+}
+
+.mapHotspot.shape-diamond.selected,
+.mapHotspot.shape-diamond.editable {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.mapHotspot.shape-diamond {
+  color: transparent;
+}
+
+.mapHotspot.shape-diamond::after {
+  content: attr(data-symbol);
+  color: white;
+  transform: rotate(-45deg);
+  font-size: calc(var(--node-size, 22px) * .42);
+  font-weight: 800;
+}
