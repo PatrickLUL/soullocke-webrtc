@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v10.3-links";
+const APP_VERSION = "v10.4-links";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -1474,6 +1474,16 @@ function getStatusLabel(status) {
   }[status || "empty"] || status;
 }
 
+function getStatusEmoji(status) {
+  return {
+    alive: "♥",
+    dead: "☠",
+    box: "📦",
+    failed: "✖",
+    empty: "＋"
+  }[status || "empty"] || "•";
+}
+
 function getLinkGridColumns(playerCount) {
   return [
     "minmax(170px, 1fr)",
@@ -1512,6 +1522,7 @@ function renderLinkTracker() {
     const locationCell = document.createElement("div");
     locationCell.className = "linkLocationCell";
     locationCell.innerHTML = `
+      <div class="linkLocationNumber">#${String(rowIndex + 1).padStart(3, "0")}</div>
       <input class="linkLocationInput" value="${escapeHtml(row.location || "")}" placeholder="Ort auswählen..." list="linkLocationSuggestions">
     `;
     const locationInput = locationCell.querySelector(".linkLocationInput");
@@ -1602,17 +1613,28 @@ if (linkTable) {
 
 function renderLinkPokemonCell(entry) {
   if (!entry || !entry.pokemon) {
-    return `<span class="linkPokemonPlaceholder">＋ Pokémon wählen</span>`;
+    return `
+      <span class="linkPokemonEmptyPlus">＋</span>
+      <span class="linkPokemonPlaceholder">Pokémon wählen</span>
+    `;
   }
 
   const sprite = tinySpriteUrl(entry.pokemon);
+  const status = entry.status || "alive";
   const nickname = entry.nickname ? `<small>${escapeHtml(entry.nickname)}</small>` : "";
   return `
-    <span class="linkPokemonMain">
+    <span class="linkPokemonSpriteBox">
       <img src="${sprite}" alt="" onerror="this.style.visibility='hidden'">
-      <strong>${escapeHtml(entry.pokemon)}</strong>
     </span>
-    <span class="linkPokemonMeta">${getStatusLabel(entry.status)}${nickname}</span>
+    <span class="linkPokemonText">
+      <strong>${escapeHtml(entry.pokemon)}</strong>
+      <span class="linkPokemonStatus statusText-${status}">
+        <b>${getStatusEmoji(status)}</b>
+        ${getStatusLabel(status)}
+        ${nickname}
+      </span>
+    </span>
+    <span class="linkPokemonChevron">⌄</span>
   `;
 }
 
@@ -1649,14 +1671,14 @@ function openLinkPokemonEditor(anchorEl, rowId, playerId) {
   const pop = document.createElement("div");
   pop.className = "linkPokemonEditor";
   pop.innerHTML = `
-    <div class="linkEditorTitle">Pokémon auswählen</div>
+    <div class="linkEditorTitle">Pokémon wählen</div>
     <input class="linkPokemonInput" placeholder="z.B. glumanda" list="pokemonSuggestions" autocomplete="off" value="${escapeHtml(entry.pokemon || "")}">
     <input class="linkNicknameInput" placeholder="Spitzname optional" value="${escapeHtml(entry.nickname || "")}">
     <select class="linkStatusInput">
-      <option value="alive">Lebendig</option>
-      <option value="dead">Besiegt</option>
-      <option value="box">Box</option>
-      <option value="failed">Bro-Failed</option>
+      <option value="alive">♥ Lebendig</option>
+      <option value="dead">☠ Besiegt</option>
+      <option value="box">📦 Box</option>
+      <option value="failed">✖ Bro-Failed</option>
     </select>
     <div class="linkEditorButtons">
       <button class="linkClearPokemon" type="button">Leeren</button>

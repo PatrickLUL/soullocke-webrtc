@@ -1,14 +1,21 @@
-# Soullocke WebRTC v10.3-links-click-fix
+# Soullocke WebRTC v10.4-links-design
 
-Fix:
-- Pokémon-Zellen im Link-Tracker öffnen jetzt zuverlässig das Pokémon-Popup.
-- Zusätzlicher delegated click/pointerup Handler auf der Link-Tabelle.
-- Pokémon-Zellen sind nicht mehr grau/deaktiviert wirkend.
-- Version oben: v10.3-links.
+Neu:
+- SoulLink Tracker optisch überarbeitet.
+- Größere Pokémon-Sprites.
+- Pokémon-Namen größer und mit Großschreibung.
+- Status mit Symbolen:
+  - ♥ Lebendig
+  - ☠ Besiegt
+  - 📦 Box
+  - ✖ Bro-Failed
+- Popup/Zeilen sehen mehr wie dein Beispiel aus.
+- Leere Pokémon-Felder sind klarer anklickbar.
+- Version oben: v10.4-links.
 
 Deploy:
 ```bash
 git add .
-git commit -m "fix link pokemon cell clicks"
+git commit -m "redesign soullink tracker"
 git push
 ```

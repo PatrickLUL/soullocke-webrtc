@@ -1247,3 +1247,299 @@ body.spotlight .tile:not(.spotlightMain):hover {
 .linkPokemonEditor {
   z-index: 99999 !important;
 }
+
+
+/* v10.4 SoulLink visual redesign */
+.linksModal {
+  background: rgba(0, 0, 0, .74);
+  backdrop-filter: blur(2px);
+}
+
+.linksModalInner {
+  width: min(1360px, calc(100vw - 38px));
+  padding: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(123,44,255,.18), transparent 34%),
+    linear-gradient(180deg, #171724 0%, #11111b 100%);
+  border: 1px solid rgba(170, 126, 255, .24);
+  box-shadow: 0 26px 100px rgba(0,0,0,.72);
+}
+
+.linksModal .linkTrackerHeader {
+  background: linear-gradient(180deg, #171724 0%, #151522 100%);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  margin: -18px -18px 14px;
+  padding: 18px;
+  border-radius: 16px 16px 0 0;
+}
+
+.linkTrackerHeader h2 {
+  font-size: 22px;
+  letter-spacing: -.02em;
+}
+
+.linkTrackerHeader p {
+  color: rgba(255,255,255,.72);
+}
+
+.linkTrackerActions button {
+  border-radius: 9px;
+  font-weight: 900;
+  box-shadow: 0 8px 24px rgba(90,60,255,.28);
+}
+
+#closeLinksBtn {
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.linkTable {
+  gap: 10px;
+}
+
+.linkHeader {
+  color: rgba(255,255,255,.78);
+  font-weight: 900;
+  padding: 0 4px 2px;
+}
+
+.linkRow {
+  padding: 8px;
+  border-left: 0;
+  border-radius: 13px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.055);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.linkRow-good {
+  background: linear-gradient(90deg, rgba(34,197,94,.20), rgba(255,255,255,.045) 36%);
+  border-color: rgba(34,197,94,.34);
+}
+
+.linkRow-bad {
+  background: linear-gradient(90deg, rgba(239,68,68,.20), rgba(255,255,255,.045) 36%);
+  border-color: rgba(239,68,68,.34);
+}
+
+.linkRow-box {
+  background: linear-gradient(90deg, rgba(245,158,11,.20), rgba(255,255,255,.045) 36%);
+  border-color: rgba(245,158,11,.34);
+}
+
+.linkRow-empty {
+  background: rgba(255,255,255,.035);
+}
+
+.linkLocationCell {
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.045);
+}
+
+.linkLocationInput {
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  background: transparent !important;
+  color: white !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.linkLocationInput::placeholder {
+  color: rgba(255,255,255,.45);
+}
+
+.linkLocationNumber {
+  color: rgba(255,255,255,.68);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.linkPokemonCell {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: 56px 1fr 24px;
+  grid-template-rows: none;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,249,255,.96));
+  color: #111827;
+  border: 1px solid rgba(255,255,255,.22);
+  box-shadow: 0 8px 22px rgba(0,0,0,.18);
+}
+
+.linkPokemonCell:hover {
+  outline: 2px solid rgba(137,88,255,.9);
+  box-shadow: 0 0 0 4px rgba(137,88,255,.14), 0 8px 22px rgba(0,0,0,.22);
+}
+
+.linkPokemonCell.empty {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  gap: 8px;
+  min-height: 76px;
+  background: rgba(255,255,255,.07) !important;
+  color: rgba(255,255,255,.78) !important;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+}
+
+.linkPokemonEmptyPlus {
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.linkPokemonPlaceholder {
+  color: inherit !important;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.linkPokemonSpriteBox {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(0,0,0,.035);
+}
+
+.linkPokemonSpriteBox img {
+  width: 50px;
+  height: 50px;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
+.linkPokemonText {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.linkPokemonText strong {
+  font-size: 17px;
+  font-weight: 950;
+  text-transform: capitalize;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.linkPokemonStatus {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.linkPokemonStatus b {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.statusText-alive {
+  color: #0f9b47;
+}
+
+.statusText-dead,
+.statusText-failed {
+  color: #dc2626;
+}
+
+.statusText-box {
+  color: #b77900;
+}
+
+.linkPokemonStatus small {
+  color: #6b7280;
+  font-weight: 800;
+}
+
+.linkPokemonStatus small::before {
+  content: "· ";
+}
+
+.linkPokemonChevron {
+  font-size: 28px;
+  line-height: 1;
+  color: #374151;
+  transform: translateY(-3px);
+}
+
+.linkActionsCell {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.linkActionsCell button {
+  border-radius: 9px;
+  font-weight: 950;
+}
+
+.linkDeleteBtn {
+  background: #d83c5c !important;
+}
+
+.linkPokemonEditor {
+  width: 360px;
+  padding: 14px;
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at top left, rgba(123,44,255,.2), transparent 42%),
+    #171724;
+  border: 1px solid rgba(170,126,255,.24);
+  box-shadow: 0 26px 80px rgba(0,0,0,.72);
+}
+
+.linkEditorTitle {
+  font-size: 17px;
+  margin-bottom: 2px;
+}
+
+.linkPokemonEditor input,
+.linkPokemonEditor select {
+  padding: 11px 12px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.linkEditorButtons button {
+  border-radius: 9px;
+  font-weight: 900;
+  padding: 10px 14px;
+}
+
+.linkSavePokemon {
+  background: #16a34a;
+}
+
+@media (max-width: 900px) {
+  .linkPokemonCell {
+    grid-template-columns: 48px 1fr 22px;
+    min-height: 68px;
+  }
+
+  .linkPokemonSpriteBox {
+    width: 46px;
+    height: 46px;
+  }
+
+  .linkPokemonSpriteBox img {
+    width: 43px;
+    height: 43px;
+  }
+}
