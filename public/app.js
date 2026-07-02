@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.15-map";
+const APP_VERSION = "v9-map-editor";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -677,118 +677,275 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-// Positionen der 8 Johto-Stationen als Prozent-Koordinaten (relativ zur
-// Bildgröße), damit sie unabhängig von der tatsächlichen Bildauflösung
-// funktionieren. Das sind grobe Schätzwerte basierend auf der ungefähren
-// Lage der Städte auf der Johto-Karte - nach dem Einfügen deines eigenen
-// Kartenbildes (siehe MAP_IMAGE_PATH unten) am besten per Auge nachjustieren.
+
+// Interaktive Johto-Karte mit Editor-Modus.
+// Die Koordinaten sind Prozentwerte relativ zur Karten-Grafik.
+// Änderungen im Editor werden lokal im Browser gespeichert und können als JSON exportiert werden.
 const MAP_IMAGE_PATH = "/map-johto.png";
+const MAP_STORAGE_KEY = "soullockeJohtoMapMarkersV1";
 
-// v8.15: Die Karte ist jetzt datengetrieben. Dadurch können wir Orte,
-// Routen, Höhlen und Arenen getrennt anzeigen und später leicht verschieben.
-// xPct/yPct sind Prozent-Koordinaten relativ zum Kartenbild.
-const JOHTO_MAP_POINTS = [
-  // Arenen / Level-Caps
-  { id: "gym-violet", type: "gym", order: 1, xPct: 18, yPct: 30, title: "Falkner", subtitle: "Violet City", cap: 13 },
-  { id: "gym-azalea", type: "gym", order: 2, xPct: 20, yPct: 55, title: "Bugsy", subtitle: "Azalea Town", cap: 17 },
-  { id: "gym-goldenrod", type: "gym", order: 3, xPct: 38, yPct: 58, title: "Whitney", subtitle: "Goldenrod City", cap: 19 },
-  { id: "gym-ecruteak", type: "gym", order: 4, xPct: 53, yPct: 33, title: "Morty", subtitle: "Ecruteak City", cap: 25 },
-  { id: "gym-cianwood", type: "gym", order: 5, xPct: 47, yPct: 76, title: "Chuck", subtitle: "Cianwood City", cap: 31 },
-  { id: "gym-olivine", type: "gym", order: 6, xPct: 41, yPct: 76, title: "Jasmine", subtitle: "Olivine City", cap: 35 },
-  { id: "gym-mahogany", type: "gym", order: 7, xPct: 68, yPct: 30, title: "Pryce", subtitle: "Mahogany Town", cap: 34 },
-  { id: "gym-blackthorn", type: "gym", order: 8, xPct: 85, yPct: 30, title: "Clair", subtitle: "Blackthorn City", cap: 41 },
+const DEFAULT_JOHTO_MARKERS = [
+  { id: "badge-1", type: "badge", n: 1, name: "Falkner – Violet City", cap: 13, xPct: 18, yPct: 30 },
+  { id: "badge-2", type: "badge", n: 2, name: "Bugsy – Azalea Town", cap: 17, xPct: 20, yPct: 52 },
+  { id: "badge-3", type: "badge", n: 3, name: "Whitney – Goldenrod City", cap: 19, xPct: 38, yPct: 48 },
+  { id: "badge-4", type: "badge", n: 4, name: "Morty – Ecruteak City", cap: 25, xPct: 53, yPct: 32 },
+  { id: "badge-5", type: "badge", n: 5, name: "Chuck – Cianwood City", cap: 31, xPct: 74, yPct: 55 },
+  { id: "badge-6", type: "badge", n: 6, name: "Jasmine – Olivine City", cap: 35, xPct: 47, yPct: 68 },
+  { id: "badge-7", type: "badge", n: 7, name: "Pryce – Mahogany Town", cap: 34, xPct: 66, yPct: 26 },
+  { id: "badge-8", type: "badge", n: 8, name: "Clair – Blackthorn City", cap: 41, xPct: 84, yPct: 30 },
 
-  // Städte / wichtige Orte
-  { id: "new-bark", type: "town", xPct: 89, yPct: 65, title: "New Bark Town", subtitle: "Startort" },
-  { id: "cherrygrove", type: "town", xPct: 78, yPct: 76, title: "Cherrygrove City" },
-  { id: "violet", type: "town", xPct: 18, yPct: 30, title: "Violet City" },
-  { id: "azalea", type: "town", xPct: 20, yPct: 55, title: "Azalea Town" },
-  { id: "goldenrod", type: "town", xPct: 38, yPct: 58, title: "Goldenrod City" },
-  { id: "ecruteak", type: "town", xPct: 53, yPct: 33, title: "Ecruteak City" },
-  { id: "olivine", type: "town", xPct: 41, yPct: 76, title: "Olivine City" },
-  { id: "cianwood", type: "town", xPct: 47, yPct: 76, title: "Cianwood City" },
-  { id: "mahogany", type: "town", xPct: 68, yPct: 30, title: "Mahogany Town" },
-  { id: "blackthorn", type: "town", xPct: 85, yPct: 30, title: "Blackthorn City" },
-  { id: "lake-rage", type: "place", xPct: 67, yPct: 14, title: "Lake of Rage" },
-  { id: "national-park", type: "place", xPct: 39, yPct: 38, title: "National Park" },
-  { id: "ruins-alph", type: "place", xPct: 27, yPct: 42, title: "Ruins of Alph" },
-  { id: "sprout-tower", type: "place", xPct: 15, yPct: 24, title: "Sprout Tower" },
-  { id: "ilex", type: "place", xPct: 29, yPct: 60, title: "Ilex Forest" },
-  { id: "union-cave", type: "place", xPct: 23, yPct: 45, title: "Union Cave" },
-  { id: "mt-mortar", type: "place", xPct: 61, yPct: 37, title: "Mt. Mortar" },
-  { id: "ice-path", type: "place", xPct: 77, yPct: 30, title: "Ice Path" },
-  { id: "whirl", type: "place", xPct: 39, yPct: 72, title: "Whirl Islands" },
+  { id: "city-new-bark", type: "city", name: "New Bark Town", xPct: 90, yPct: 55 },
+  { id: "city-cherrygrove", type: "city", name: "Cherrygrove City", xPct: 74, yPct: 66 },
+  { id: "city-violet", type: "city", name: "Violet City", xPct: 22, yPct: 33 },
+  { id: "city-azalea", type: "city", name: "Azalea Town", xPct: 22, yPct: 59 },
+  { id: "city-goldenrod", type: "city", name: "Goldenrod City", xPct: 38, yPct: 57 },
+  { id: "city-ecruteak", type: "city", name: "Ecruteak City", xPct: 52, yPct: 35 },
+  { id: "city-olivine", type: "city", name: "Olivine City", xPct: 47, yPct: 78 },
+  { id: "city-cianwood", type: "city", name: "Cianwood City", xPct: 17, yPct: 73 },
+  { id: "city-mahogany", type: "city", name: "Mahogany Town", xPct: 69, yPct: 36 },
+  { id: "city-blackthorn", type: "city", name: "Blackthorn City", xPct: 84, yPct: 33 },
 
-  // Routen / Wasserwege - grob auf die Karte gelegt, damit sie anklickbar sind.
-  { id: "r29", type: "route", xPct: 83, yPct: 70, title: "Route 29" },
-  { id: "r30", type: "route", xPct: 76, yPct: 62, title: "Route 30" },
-  { id: "r31", type: "route", xPct: 70, yPct: 51, title: "Route 31" },
-  { id: "r32", type: "route", xPct: 20, yPct: 42, title: "Route 32" },
-  { id: "r33", type: "route", xPct: 23, yPct: 54, title: "Route 33" },
-  { id: "r34", type: "route", xPct: 33, yPct: 64, title: "Route 34" },
-  { id: "r35", type: "route", xPct: 38, yPct: 46, title: "Route 35" },
-  { id: "r36", type: "route", xPct: 31, yPct: 35, title: "Route 36" },
-  { id: "r37", type: "route", xPct: 45, yPct: 35, title: "Route 37" },
-  { id: "r38", type: "route", xPct: 47, yPct: 43, title: "Route 38" },
-  { id: "r39", type: "route", xPct: 43, yPct: 58, title: "Route 39" },
-  { id: "r40", type: "route", xPct: 42, yPct: 86, title: "Route 40" },
-  { id: "r41", type: "route", xPct: 47, yPct: 86, title: "Route 41" },
-  { id: "r42", type: "route", xPct: 62, yPct: 34, title: "Route 42" },
-  { id: "r43", type: "route", xPct: 67, yPct: 21, title: "Route 43" },
-  { id: "r44", type: "route", xPct: 74, yPct: 31, title: "Route 44" },
-  { id: "r45", type: "route", xPct: 83, yPct: 44, title: "Route 45" },
-  { id: "r46", type: "route", xPct: 78, yPct: 52, title: "Route 46" },
-  { id: "r47", type: "route", xPct: 52, yPct: 67, title: "Route 47" },
-  { id: "r48", type: "route", xPct: 55, yPct: 56, title: "Route 48" }
+  { id: "route-29", type: "route", name: "Route 29", xPct: 83, yPct: 61 },
+  { id: "route-30", type: "route", name: "Route 30", xPct: 72, yPct: 54 },
+  { id: "route-31", type: "route", name: "Route 31", xPct: 31, yPct: 38 },
+  { id: "route-32", type: "route", name: "Route 32", xPct: 21, yPct: 45 },
+  { id: "route-33", type: "route", name: "Route 33", xPct: 25, yPct: 60 },
+  { id: "route-34", type: "route", name: "Route 34", xPct: 38, yPct: 67 },
+  { id: "route-35", type: "route", name: "Route 35", xPct: 39, yPct: 47 },
+  { id: "route-36", type: "route", name: "Route 36", xPct: 43, yPct: 37 },
+  { id: "route-37", type: "route", name: "Route 37", xPct: 49, yPct: 39 },
+  { id: "route-38", type: "route", name: "Route 38", xPct: 45, yPct: 48 },
+  { id: "route-39", type: "route", name: "Route 39", xPct: 47, yPct: 58 },
+  { id: "route-40", type: "route", name: "Route 40", xPct: 36, yPct: 78 },
+  { id: "route-41", type: "route", name: "Route 41", xPct: 23, yPct: 73 },
+  { id: "route-42", type: "route", name: "Route 42", xPct: 61, yPct: 43 },
+  { id: "route-43", type: "route", name: "Route 43", xPct: 66, yPct: 27 },
+  { id: "route-44", type: "route", name: "Route 44", xPct: 75, yPct: 40 },
+  { id: "route-45", type: "route", name: "Route 45", xPct: 84, yPct: 47 },
+  { id: "route-46", type: "route", name: "Route 46", xPct: 78, yPct: 55 },
+  { id: "route-47", type: "route", name: "Route 47", xPct: 17, yPct: 62 },
+  { id: "route-48", type: "route", name: "Route 48", xPct: 26, yPct: 40 },
+
+  { id: "place-ruins", type: "place", name: "Ruins of Alph", xPct: 30, yPct: 47 },
+  { id: "place-ilex", type: "place", name: "Ilex Forest", xPct: 30, yPct: 61 },
+  { id: "place-national-park", type: "place", name: "National Park", xPct: 39, yPct: 42 },
+  { id: "place-lake-rage", type: "place", name: "Lake of Rage", xPct: 66, yPct: 17 },
+  { id: "place-ice-path", type: "place", name: "Ice Path", xPct: 77, yPct: 33 },
+  { id: "place-dark-cave", type: "place", name: "Dark Cave", xPct: 83, yPct: 45 }
 ];
 
-function buildMapStations(gameKey) {
-  const g = getGame(gameKey);
-  const gymNames = g.badgeNames;
-  const caps = g.badgeCaps;
+let mapMarkers = loadMapMarkers();
+let mapEditMode = false;
+let selectedMapMarkerId = null;
 
-  return JOHTO_MAP_POINTS.map(point => {
-    if (point.type === "gym") {
-      const idx = Math.max(0, (point.order || 1) - 1);
-      return {
-        ...point,
-        label: gymNames[idx] || point.title,
-        cap: caps[idx]
-      };
-    }
-    return point;
-  });
+function loadMapMarkers() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(MAP_STORAGE_KEY) || "null");
+    if (Array.isArray(saved) && saved.length) return saved;
+  } catch {}
+  return structuredClone(DEFAULT_JOHTO_MARKERS);
 }
 
-function mapTypeLabel(type) {
-  if (type === "gym") return "Arena";
-  if (type === "route") return "Route";
-  if (type === "town") return "Stadt";
-  return "Ort";
+function saveMapMarkers() {
+  localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(mapMarkers));
 }
 
-function markerText(point) {
-  if (point.type === "gym") return String(point.order);
-  if (point.type === "route") return point.title.replace("Route ", "");
-  if (point.type === "town") return "●";
+function getMarkerTypeLabel(type) {
+  return {
+    badge: "Arena",
+    city: "Stadt",
+    route: "Route",
+    place: "Ort"
+  }[type] || "Ort";
+}
+
+function getMarkerSymbol(marker) {
+  if (marker.type === "badge") return String(marker.n || "★");
+  if (marker.type === "city") return "●";
+  if (marker.type === "route") return String(marker.name || "").replace(/[^0-9]/g, "") || "R";
   return "◆";
 }
 
-function mapPointDetails(point) {
-  const parts = [`<strong>${escapeHtml(point.title)}</strong>`];
-  if (point.subtitle) parts.push(`<span>${escapeHtml(point.subtitle)}</span>`);
-  parts.push(`<span>Typ: ${mapTypeLabel(point.type)}</span>`);
-  if (point.type === "gym") parts.push(`<span>Orden #${point.order} · Level-Cap: Lv ${point.cap}</span>`);
-  if (point.type === "route") parts.push(`<span>Route/Encounter-Ort: für Nuzlocke-Catches markieren.</span>`);
-  return parts.join("<br>");
+function showMapMarkerInfo(marker) {
+  selectedMapMarkerId = marker.id;
+  const capLine = marker.cap ? `<br>Level-Cap: Lv ${marker.cap}` : "";
+  mapInfoPanel.innerHTML = `
+    <strong>${escapeHtml(marker.name || "Unbenannt")}</strong>
+    <br>Typ: ${escapeHtml(getMarkerTypeLabel(marker.type))}
+    ${capLine}
+    <br><span class="mapCoordText">X: ${marker.xPct.toFixed(2)}% · Y: ${marker.yPct.toFixed(2)}%</span>
+  `;
+}
+
+function renderMapEditorPanel(marker) {
+  if (!mapEditMode) return "";
+
+  if (!marker) {
+    return `
+      <div class="mapEditorPanel">
+        <strong>Editor</strong>
+        <p>Marker anklicken oder neuen Marker hinzufügen.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="mapEditorPanel">
+      <strong>Marker bearbeiten</strong>
+      <label>Name
+        <input id="mapEditName" value="${escapeHtml(marker.name || "")}">
+      </label>
+      <label>Typ
+        <select id="mapEditType">
+          <option value="badge" ${marker.type === "badge" ? "selected" : ""}>Arena</option>
+          <option value="city" ${marker.type === "city" ? "selected" : ""}>Stadt</option>
+          <option value="route" ${marker.type === "route" ? "selected" : ""}>Route</option>
+          <option value="place" ${marker.type === "place" ? "selected" : ""}>Ort</option>
+        </select>
+      </label>
+      <label>Level-Cap
+        <input id="mapEditCap" value="${marker.cap || ""}" placeholder="optional">
+      </label>
+      <div class="mapEditorCoords">X ${marker.xPct.toFixed(2)}% · Y ${marker.yPct.toFixed(2)}%</div>
+      <div class="mapEditorActions">
+        <button id="mapApplyMarkerBtn" type="button">Übernehmen</button>
+        <button id="mapDeleteMarkerBtn" type="button">Löschen</button>
+      </div>
+    </div>
+  `;
+}
+
+function attachMapEditorPanelEvents(marker) {
+  if (!mapEditMode || !marker) return;
+
+  const apply = document.querySelector("#mapApplyMarkerBtn");
+  const del = document.querySelector("#mapDeleteMarkerBtn");
+
+  if (apply) {
+    apply.onclick = () => {
+      marker.name = document.querySelector("#mapEditName").value.trim() || "Unbenannt";
+      marker.type = document.querySelector("#mapEditType").value;
+      const capValue = document.querySelector("#mapEditCap").value.trim();
+      marker.cap = capValue ? Number(capValue) || capValue : "";
+      saveMapMarkers();
+      openMap();
+      selectMapMarker(marker.id);
+    };
+  }
+
+  if (del) {
+    del.onclick = () => {
+      mapMarkers = mapMarkers.filter(m => m.id !== marker.id);
+      selectedMapMarkerId = null;
+      saveMapMarkers();
+      openMap();
+    };
+  }
+}
+
+function selectMapMarker(markerId) {
+  selectedMapMarkerId = markerId;
+  mapImageContainer.querySelectorAll(".mapHotspot.selected").forEach(el => el.classList.remove("selected"));
+  const markerElement = mapImageContainer.querySelector(`[data-marker-id="${CSS.escape(markerId)}"]`);
+  if (markerElement) markerElement.classList.add("selected");
+  const marker = mapMarkers.find(m => m.id === markerId);
+  if (marker) {
+    showMapMarkerInfo(marker);
+    mapInfoPanel.insertAdjacentHTML("beforeend", renderMapEditorPanel(marker));
+    attachMapEditorPanelEvents(marker);
+  }
+}
+
+function makeMapHotspot(marker) {
+  const spot = document.createElement("button");
+  spot.type = "button";
+  spot.className = `mapHotspot mapHotspot-${marker.type}`;
+  if (mapEditMode) spot.classList.add("editable");
+  spot.style.left = `${marker.xPct}%`;
+  spot.style.top = `${marker.yPct}%`;
+  spot.textContent = getMarkerSymbol(marker);
+  spot.dataset.markerId = marker.id;
+  spot.title = marker.name;
+
+  spot.addEventListener("click", (event) => {
+    event.stopPropagation();
+    selectMapMarker(marker.id);
+  });
+
+  if (mapEditMode) {
+    spot.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      selectMapMarker(marker.id);
+      spot.setPointerCapture(event.pointerId);
+
+      const move = (moveEvent) => {
+        const rect = mapImageContainer.getBoundingClientRect();
+        marker.xPct = Math.max(0, Math.min(100, ((moveEvent.clientX - rect.left) / rect.width) * 100));
+        marker.yPct = Math.max(0, Math.min(100, ((moveEvent.clientY - rect.top) / rect.height) * 100));
+        spot.style.left = `${marker.xPct}%`;
+        spot.style.top = `${marker.yPct}%`;
+        showMapMarkerInfo(marker);
+        mapInfoPanel.insertAdjacentHTML("beforeend", renderMapEditorPanel(marker));
+        attachMapEditorPanelEvents(marker);
+      };
+
+      const up = () => {
+        saveMapMarkers();
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+      };
+
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+    });
+  }
+
+  return spot;
+}
+
+async function exportMapJson() {
+  const json = JSON.stringify(mapMarkers, null, 2);
+  try {
+    await navigator.clipboard.writeText(json);
+    mapInfoPanel.innerHTML = `<strong>Export kopiert.</strong><br>JSON wurde in die Zwischenablage kopiert.`;
+  } catch {
+    mapInfoPanel.innerHTML = `<strong>Export JSON</strong><textarea class="mapExportBox" readonly>${escapeHtml(json)}</textarea>`;
+  }
+}
+
+function addMapMarker(type = "route") {
+  const id = `${type}-${Date.now()}`;
+  const marker = {
+    id,
+    type,
+    name: type === "route" ? "Neue Route" : type === "city" ? "Neue Stadt" : type === "badge" ? "Neue Arena" : "Neuer Ort",
+    xPct: 50,
+    yPct: 50
+  };
+  mapMarkers.push(marker);
+  selectedMapMarkerId = id;
+  saveMapMarkers();
+  openMap();
+  selectMapMarker(id);
 }
 
 function openMap() {
   mapGameLabel.textContent = `${getGame(currentGame).label} – Johto`;
-  mapInfoPanel.textContent = "Klicke auf Arena, Stadt, Route oder Ort.";
   mapModal.classList.remove("hidden");
-
   mapImageContainer.innerHTML = "";
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "mapToolbar";
+  toolbar.innerHTML = `
+    <button id="mapEditToggleBtn" type="button">${mapEditMode ? "Editor: An" : "Editor: Aus"}</button>
+    <button id="mapAddRouteBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Route</button>
+    <button id="mapAddCityBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Stadt</button>
+    <button id="mapAddBadgeBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Arena</button>
+    <button id="mapAddPlaceBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Ort</button>
+    <button id="mapExportBtn" type="button">Export JSON</button>
+    <button id="mapResetBtn" type="button">Reset</button>
+  `;
 
   const img = document.createElement("img");
   img.className = "mapImage";
@@ -797,42 +954,45 @@ function openMap() {
 
   const hotspotLayer = document.createElement("div");
   hotspotLayer.className = "mapHotspotLayer";
+  if (mapEditMode) hotspotLayer.classList.add("editing");
 
-  buildMapStations(currentGame).forEach(point => {
-    const spot = document.createElement("button");
-    spot.type = "button";
-    spot.className = `mapHotspot mapHotspot-${point.type}`;
-    spot.style.left = `${point.xPct}%`;
-    spot.style.top = `${point.yPct}%`;
-    spot.textContent = markerText(point);
-    spot.title = `${point.title}${point.cap ? ` · Cap Lv ${point.cap}` : ""}`;
-    spot.addEventListener("click", (event) => {
-      event.stopPropagation();
-      mapImageContainer.querySelectorAll(".mapHotspot.selected").forEach(el => el.classList.remove("selected"));
-      spot.classList.add("selected");
-      mapInfoPanel.innerHTML = mapPointDetails(point);
-    });
-    hotspotLayer.appendChild(spot);
-  });
-
-  const legend = document.createElement("div");
-  legend.className = "mapLegend";
-  legend.innerHTML = `
-    <span><b class="legendGym"></b>Arena</span>
-    <span><b class="legendTown"></b>Stadt</span>
-    <span><b class="legendRoute"></b>Route</span>
-    <span><b class="legendPlace"></b>Ort</span>
-  `;
+  mapMarkers.forEach(marker => hotspotLayer.appendChild(makeMapHotspot(marker)));
 
   const notice = document.createElement("div");
   notice.className = "mapImageMissingNotice";
-  notice.innerHTML = `Kein Kartenbild gefunden.<br>Lege <code>public${MAP_IMAGE_PATH}</code> ab.`;
+  notice.innerHTML = `Kein eigenes Kartenbild gefunden.<br>Lege deine Karte unter <code>public${MAP_IMAGE_PATH}</code> ab.`;
 
   img.addEventListener("error", () => mapImageContainer.classList.add("missing"), { once: true });
   img.addEventListener("load", () => mapImageContainer.classList.remove("missing"), { once: true });
 
-  mapImageContainer.append(img, hotspotLayer, legend, notice);
+  mapImageContainer.append(toolbar, img, hotspotLayer, notice);
+
+  document.querySelector("#mapEditToggleBtn").onclick = () => {
+    mapEditMode = !mapEditMode;
+    openMap();
+  };
+  document.querySelector("#mapAddRouteBtn").onclick = () => addMapMarker("route");
+  document.querySelector("#mapAddCityBtn").onclick = () => addMapMarker("city");
+  document.querySelector("#mapAddBadgeBtn").onclick = () => addMapMarker("badge");
+  document.querySelector("#mapAddPlaceBtn").onclick = () => addMapMarker("place");
+  document.querySelector("#mapExportBtn").onclick = exportMapJson;
+  document.querySelector("#mapResetBtn").onclick = () => {
+    if (!confirm("Map-Marker wirklich auf Standard zurücksetzen?")) return;
+    mapMarkers = structuredClone(DEFAULT_JOHTO_MARKERS);
+    selectedMapMarkerId = null;
+    saveMapMarkers();
+    openMap();
+  };
+
+  if (selectedMapMarkerId && mapMarkers.some(m => m.id === selectedMapMarkerId)) {
+    selectMapMarker(selectedMapMarkerId);
+  } else {
+    mapInfoPanel.innerHTML = mapEditMode
+      ? `Editor aktiv: Marker anklicken und ziehen. ${renderMapEditorPanel(null)}`
+      : "Klicke auf einen Marker für Details. Aktiviere Editor, um Marker zu verschieben.";
+  }
 }
+
 function closeMap() {
   mapModal.classList.add("hidden");
 }

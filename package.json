@@ -1,6 +1,6 @@
 {
-  "name": "soullocke-webrtc-v8-15-map",
-  "version": "1.1.5",
+  "name": "soullocke-webrtc-v9-map-editor",
+  "version": "1.2.0",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -1,16 +1,23 @@
-# Soullocke WebRTC v8.15-map
+# Soullocke WebRTC v9-map-editor
 
-Map-Update:
-- Karte basiert weiter auf deinem aktuellen Projektstand.
-- Nicht mehr nur 8 Arena-Buttons.
-- Zusätzliche Marker für Städte, Routen und wichtige Orte.
-- Unterschiedliche Marker-Farben: Arena, Stadt, Route, Ort.
-- Info-Panel zeigt Details je Marker.
-- Positionen sind datengetrieben in `JOHTO_MAP_POINTS`, dadurch leicht nachjustierbar.
+Neu:
+- Map Editor direkt im Karten-Popup.
+- Editor: An/Aus.
+- Marker per Drag & Drop verschieben.
+- Neue Marker hinzufügen: Route, Stadt, Arena, Ort.
+- Marker bearbeiten: Name, Typ, Level-Cap.
+- Marker löschen.
+- Reset auf Standard.
+- Export JSON kopiert die Marker in die Zwischenablage.
+- Positionen werden lokal im Browser gespeichert.
 
 Deploy:
 ```bash
 git add .
-git commit -m "improve johto map markers"
+git commit -m "add map editor"
 git push
 ```
+
+Hinweis:
+Die bearbeiteten Marker werden aktuell im Browser-localStorage gespeichert.
+Für dauerhaft geteilte Marker kann der exportierte JSON später in eine Datei wie `public/maps/johto.json` übernommen werden.
