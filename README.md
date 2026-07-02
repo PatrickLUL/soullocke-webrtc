@@ -1,21 +1,17 @@
-# Soullocke WebRTC v10.4-links-design
+# Soullocke WebRTC v10.5-pokemon-picker-modal
 
 Neu:
-- SoulLink Tracker optisch überarbeitet.
-- Größere Pokémon-Sprites.
-- Pokémon-Namen größer und mit Großschreibung.
-- Status mit Symbolen:
-  - ♥ Lebendig
-  - ☠ Besiegt
-  - 📦 Box
-  - ✖ Bro-Failed
-- Popup/Zeilen sehen mehr wie dein Beispiel aus.
-- Leere Pokémon-Felder sind klarer anklickbar.
-- Version oben: v10.4-links.
+- Pokémon-Auswahl ist jetzt ein großes Modal wie im Beispiel.
+- Keine kleine Dropdown-Box mehr.
+- Suchfeld oben.
+- Liste mit Sprite, Name und Nummer.
+- Klick auf Pokémon wählt es aus.
+- Status + Spitzname unten.
+- Speichern übernimmt in den SoulLink Tracker.
 
 Deploy:
 ```bash
 git add .
-git commit -m "redesign soullink tracker"
+git commit -m "replace link pokemon dropdown with picker modal"
 git push
 ```

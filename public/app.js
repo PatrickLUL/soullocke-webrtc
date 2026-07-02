@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v10.4-links";
+const APP_VERSION = "v10.5-links";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -102,6 +102,25 @@ function setupPokemonSuggestions() {
     .sort((a, b) => a.localeCompare(b))
     .map(name => `<option value="${name}"></option>`)
     .join("");
+}
+
+function getPokemonDisplayList() {
+  const seenIds = new Set();
+  return Object.entries(POKEMON_MAP)
+    .map(([name, id]) => ({ name, id }))
+    .sort((a, b) => a.id - b.id || a.name.localeCompare(b.name))
+    .filter(item => {
+      if (seenIds.has(item.id)) return false;
+      seenIds.add(item.id);
+      return true;
+    });
+}
+
+function formatPokemonName(name) {
+  return String(name || "")
+    .split("-")
+    .map(part => part ? part[0].toUpperCase() + part.slice(1) : part)
+    .join(" ");
 }
 
 // Quelle für Level-Caps: Nuzlocke University, "Hardcore Nuzlocke Level Caps by Generation"
@@ -1639,25 +1658,8 @@ function renderLinkPokemonCell(entry) {
 }
 
 function closeLinkPokemonEditor() {
-  const existing = document.querySelector(".linkPokemonEditor");
+  const existing = document.querySelector(".pokemonPickerModal");
   if (existing) existing.remove();
-}
-
-function positionLinkEditor(pop, anchorEl) {
-  const rect = anchorEl.getBoundingClientRect();
-  document.body.appendChild(pop);
-
-  const popRect = pop.getBoundingClientRect();
-  let top = rect.bottom + 8;
-  let left = rect.left;
-
-  if (left + popRect.width > window.innerWidth - 12) left = window.innerWidth - popRect.width - 12;
-  if (left < 12) left = 12;
-  if (top + popRect.height > window.innerHeight - 12) top = rect.top - popRect.height - 8;
-  if (top < 12) top = 12;
-
-  pop.style.left = `${left}px`;
-  pop.style.top = `${top}px`;
 }
 
 function openLinkPokemonEditor(anchorEl, rowId, playerId) {
@@ -1667,40 +1669,107 @@ function openLinkPokemonEditor(anchorEl, rowId, playerId) {
   if (!row) return;
 
   const entry = getLinkEntry(row, playerId);
+  let selectedPokemon = normalizePokemonName(entry.pokemon || "");
 
-  const pop = document.createElement("div");
-  pop.className = "linkPokemonEditor";
-  pop.innerHTML = `
-    <div class="linkEditorTitle">Pokémon wählen</div>
-    <input class="linkPokemonInput" placeholder="z.B. glumanda" list="pokemonSuggestions" autocomplete="off" value="${escapeHtml(entry.pokemon || "")}">
-    <input class="linkNicknameInput" placeholder="Spitzname optional" value="${escapeHtml(entry.nickname || "")}">
-    <select class="linkStatusInput">
-      <option value="alive">♥ Lebendig</option>
-      <option value="dead">☠ Besiegt</option>
-      <option value="box">📦 Box</option>
-      <option value="failed">✖ Bro-Failed</option>
-    </select>
-    <div class="linkEditorButtons">
-      <button class="linkClearPokemon" type="button">Leeren</button>
-      <button class="linkSavePokemon" type="button">Speichern</button>
+  const modal = document.createElement("div");
+  modal.className = "pokemonPickerModal";
+  modal.innerHTML = `
+    <div class="pokemonPickerPanel">
+      <div class="pokemonPickerHeader">
+        <h3>Pokémon auswählen</h3>
+        <button class="pokemonPickerClose" type="button">×</button>
+      </div>
+
+      <input class="pokemonPickerSearch" type="text" placeholder="Pokémon nach Name oder Nummer suchen..." autocomplete="off">
+
+      <div class="pokemonPickerList"></div>
+
+      <div class="pokemonPickerDetails">
+        <div class="pokemonPickerSelected">
+          <span class="pokemonPickerSpritePreview"></span>
+          <strong class="pokemonPickerSelectedName">${selectedPokemon ? formatPokemonName(selectedPokemon) : "Kein Pokémon gewählt"}</strong>
+        </div>
+        <input class="pokemonPickerNickname" type="text" placeholder="Spitzname optional" value="${escapeHtml(entry.nickname || "")}">
+        <select class="pokemonPickerStatus">
+          <option value="alive">♥ Lebendig</option>
+          <option value="dead">☠ Besiegt</option>
+          <option value="box">📦 Box</option>
+          <option value="failed">✖ Bro-Failed</option>
+        </select>
+      </div>
+
+      <div class="pokemonPickerActions">
+        <button class="pokemonPickerClear" type="button">Leeren</button>
+        <button class="pokemonPickerCancel" type="button">Abbrechen</button>
+        <button class="pokemonPickerSave" type="button">Speichern</button>
+      </div>
     </div>
   `;
 
-  const pokemonInput = pop.querySelector(".linkPokemonInput");
-  const nicknameInput = pop.querySelector(".linkNicknameInput");
-  const statusInput = pop.querySelector(".linkStatusInput");
+  const searchInput = modal.querySelector(".pokemonPickerSearch");
+  const list = modal.querySelector(".pokemonPickerList");
+  const nicknameInput = modal.querySelector(".pokemonPickerNickname");
+  const statusInput = modal.querySelector(".pokemonPickerStatus");
+  const selectedName = modal.querySelector(".pokemonPickerSelectedName");
+  const spritePreview = modal.querySelector(".pokemonPickerSpritePreview");
   statusInput.value = entry.status && entry.status !== "empty" ? entry.status : "alive";
 
+  const allPokemon = getPokemonDisplayList();
+
+  function updateSelectedPreview() {
+    if (!selectedPokemon) {
+      selectedName.textContent = "Kein Pokémon gewählt";
+      spritePreview.innerHTML = "";
+      return;
+    }
+
+    selectedName.textContent = formatPokemonName(selectedPokemon);
+    spritePreview.innerHTML = `<img src="${tinySpriteUrl(selectedPokemon)}" alt="">`;
+  }
+
+  function renderPokemonList() {
+    const q = normalizePokemonName(searchInput.value);
+    const filtered = allPokemon.filter(item => {
+      if (!q) return true;
+      return item.name.includes(q) || String(item.id).includes(q.replace("#", ""));
+    }).slice(0, 151);
+
+    list.innerHTML = "";
+
+    filtered.forEach(item => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `pokemonPickerItem ${item.name === selectedPokemon ? "selected" : ""}`;
+      btn.innerHTML = `
+        <img src="${tinySpriteUrl(item.name)}" alt="">
+        <span>${escapeHtml(formatPokemonName(item.name))}</span>
+        <small>#${String(item.id).padStart(3, "0")}</small>
+      `;
+      btn.addEventListener("click", () => {
+        selectedPokemon = item.name;
+        updateSelectedPreview();
+        renderPokemonList();
+      });
+      list.appendChild(btn);
+    });
+
+    if (!filtered.length) {
+      const empty = document.createElement("div");
+      empty.className = "pokemonPickerEmpty";
+      empty.textContent = "Kein Pokémon gefunden.";
+      list.appendChild(empty);
+    }
+  }
+
   function saveEntry() {
-    const pokemon = normalizePokemonName(pokemonInput.value);
     const nextRows = linkRows.map(r => {
       if (r.id !== rowId) return r;
       return {
         ...r,
         entries: {
           ...(r.entries || {}),
-          [playerId]: pokemon ? {
-            pokemon,
+          [playerId]: selectedPokemon ? {
+            pokemon: selectedPokemon,
             nickname: nicknameInput.value.trim(),
             status: statusInput.value
           } : { pokemon: "", nickname: "", status: "empty" }
@@ -1722,17 +1791,29 @@ function openLinkPokemonEditor(anchorEl, rowId, playerId) {
     closeLinkPokemonEditor();
   }
 
-  pop.querySelector(".linkSavePokemon").addEventListener("click", saveEntry);
-  pop.querySelector(".linkClearPokemon").addEventListener("click", clearEntry);
-  pop.addEventListener("click", (event) => event.stopPropagation());
-  pokemonInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") saveEntry();
+  modal.querySelector(".pokemonPickerClose").addEventListener("click", closeLinkPokemonEditor);
+  modal.querySelector(".pokemonPickerCancel").addEventListener("click", closeLinkPokemonEditor);
+  modal.querySelector(".pokemonPickerClear").addEventListener("click", clearEntry);
+  modal.querySelector(".pokemonPickerSave").addEventListener("click", saveEntry);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeLinkPokemonEditor();
+    event.stopPropagation();
+  });
+  modal.querySelector(".pokemonPickerPanel").addEventListener("click", event => event.stopPropagation());
+
+  searchInput.addEventListener("input", renderPokemonList);
+  searchInput.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeLinkPokemonEditor();
+    if (event.key === "Enter") {
+      const first = list.querySelector(".pokemonPickerItem");
+      if (first) first.click();
+    }
   });
 
-  positionLinkEditor(pop, anchorEl);
-  pokemonInput.focus();
-  pokemonInput.select();
+  document.body.appendChild(modal);
+  updateSelectedPreview();
+  renderPokemonList();
+  searchInput.focus();
 }
 
 function addLinkRow(location = "") {
@@ -2128,7 +2209,7 @@ document.body.addEventListener("click", (event) => {
   for (const id of activeStreams.keys()) resumeVideo(id);
 
   const target = event.target;
-  if (target.closest && (target.closest(".slotPopover") || target.closest(".linkPokemonEditor") || target.closest(".linkPokemonCell") || target.closest(".spriteSlot.editable"))) return;
+  if (target.closest && (target.closest(".slotPopover") || target.closest(".pokemonPickerModal") || target.closest(".linkPokemonCell") || target.closest(".spriteSlot.editable"))) return;
   closeSlotPopover();
 
   if (settingsPanel && !settingsPanel.classList.contains("hidden")) {

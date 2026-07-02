@@ -1543,3 +1543,190 @@ body.spotlight .tile:not(.spotlightMain):hover {
     height: 43px;
   }
 }
+
+
+/* v10.5 Full Pokémon picker modal */
+.pokemonPickerModal {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0,0,0,.58);
+  backdrop-filter: blur(2px);
+}
+
+.pokemonPickerPanel {
+  width: min(620px, calc(100vw - 36px));
+  max-height: calc(100vh - 40px);
+  display: grid;
+  grid-template-rows: auto auto minmax(260px, 1fr) auto auto;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #1f2937;
+  box-shadow: 0 30px 90px rgba(0,0,0,.5);
+}
+
+.pokemonPickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pokemonPickerHeader h3 {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 950;
+  color: #172033;
+}
+
+.pokemonPickerClose {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  background: white;
+  color: #314158;
+  border: 3px solid #bfdbfe;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.pokemonPickerSearch,
+.pokemonPickerNickname,
+.pokemonPickerStatus {
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #f2f4f8;
+  color: #111827;
+  font-size: 15px;
+}
+
+.pokemonPickerList {
+  min-height: 280px;
+  max-height: 380px;
+  overflow: auto;
+  border: 1px solid #dfe4ea;
+  border-radius: 8px;
+  background: white;
+}
+
+.pokemonPickerItem {
+  width: 100%;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 52px 1fr 64px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border: 0;
+  border-bottom: 1px solid #edf0f3;
+  border-radius: 0;
+  background: white;
+  color: #172033;
+  text-align: left;
+}
+
+.pokemonPickerItem:hover,
+.pokemonPickerItem.selected {
+  background: #eef5ff;
+}
+
+.pokemonPickerItem img {
+  width: 42px;
+  height: 42px;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
+.pokemonPickerItem span {
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.pokemonPickerItem small {
+  justify-self: end;
+  color: #5d6675;
+  font-size: 15px;
+}
+
+.pokemonPickerEmpty {
+  padding: 28px;
+  text-align: center;
+  color: #667085;
+}
+
+.pokemonPickerDetails {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, 1fr) 150px;
+  gap: 10px;
+  align-items: center;
+}
+
+.pokemonPickerSelected {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: #f2f4f8;
+}
+
+.pokemonPickerSpritePreview img {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+}
+
+.pokemonPickerSelectedName {
+  font-size: 15px;
+  color: #172033;
+}
+
+.pokemonPickerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.pokemonPickerActions button {
+  padding: 11px 15px;
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+.pokemonPickerClear {
+  background: #e5e7eb;
+  color: #172033;
+}
+
+.pokemonPickerCancel {
+  background: #4b5563;
+  color: white;
+}
+
+.pokemonPickerSave {
+  background: #16a34a;
+  color: white;
+}
+
+@media (max-width: 720px) {
+  .pokemonPickerPanel {
+    padding: 16px;
+  }
+
+  .pokemonPickerDetails {
+    grid-template-columns: 1fr;
+  }
+
+  .pokemonPickerItem {
+    grid-template-columns: 44px 1fr 56px;
+  }
+}
