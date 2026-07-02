@@ -1,23 +1,19 @@
-# Soullocke WebRTC v9-map-editor
+# Soullocke WebRTC v9.1-map-editor
 
 Neu:
-- Map Editor direkt im Karten-Popup.
-- Editor: An/Aus.
-- Marker per Drag & Drop verschieben.
-- Neue Marker hinzufügen: Route, Stadt, Arena, Ort.
-- Marker bearbeiten: Name, Typ, Level-Cap.
-- Marker löschen.
-- Reset auf Standard.
-- Export JSON kopiert die Marker in die Zwischenablage.
-- Positionen werden lokal im Browser gespeichert.
+- Node-Größe ist über Slider einstellbar.
+- Arena und Stadt sind jetzt ein gemeinsamer Typ: `Arena/Stadt`.
+- Es gibt weiterhin normale `Stadt`-Nodes.
+- Jeder Marker hat `encounterDone`.
+- Grün = Encounter offen.
+- Rot = Encounter verbraucht.
+- Marker-Editor hat Toggle für Encounter verbraucht.
+- Außerhalb vom Editor kann man beim ausgewählten Marker schnell Encounter offen/verbraucht toggeln.
+- Export JSON enthält die Encounter-Werte.
 
 Deploy:
 ```bash
 git add .
-git commit -m "add map editor"
+git commit -m "improve map nodes and encounters"
 git push
 ```
-
-Hinweis:
-Die bearbeiteten Marker werden aktuell im Browser-localStorage gespeichert.
-Für dauerhaft geteilte Marker kann der exportierte JSON später in eine Datei wie `public/maps/johto.json` übernommen werden.

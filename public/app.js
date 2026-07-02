@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v9-map-editor";
+const APP_VERSION = "v9.1-map-editor";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -678,72 +678,73 @@ function escapeHtml(value) {
 }
 
 
+
 // Interaktive Johto-Karte mit Editor-Modus.
 // Die Koordinaten sind Prozentwerte relativ zur Karten-Grafik.
 // Änderungen im Editor werden lokal im Browser gespeichert und können als JSON exportiert werden.
 const MAP_IMAGE_PATH = "/map-johto.png";
-const MAP_STORAGE_KEY = "soullockeJohtoMapMarkersV1";
+const MAP_STORAGE_KEY = "soullockeJohtoMapMarkersV2";
 
 const DEFAULT_JOHTO_MARKERS = [
-  { id: "badge-1", type: "badge", n: 1, name: "Falkner – Violet City", cap: 13, xPct: 18, yPct: 30 },
-  { id: "badge-2", type: "badge", n: 2, name: "Bugsy – Azalea Town", cap: 17, xPct: 20, yPct: 52 },
-  { id: "badge-3", type: "badge", n: 3, name: "Whitney – Goldenrod City", cap: 19, xPct: 38, yPct: 48 },
-  { id: "badge-4", type: "badge", n: 4, name: "Morty – Ecruteak City", cap: 25, xPct: 53, yPct: 32 },
-  { id: "badge-5", type: "badge", n: 5, name: "Chuck – Cianwood City", cap: 31, xPct: 74, yPct: 55 },
-  { id: "badge-6", type: "badge", n: 6, name: "Jasmine – Olivine City", cap: 35, xPct: 47, yPct: 68 },
-  { id: "badge-7", type: "badge", n: 7, name: "Pryce – Mahogany Town", cap: 34, xPct: 66, yPct: 26 },
-  { id: "badge-8", type: "badge", n: 8, name: "Clair – Blackthorn City", cap: 41, xPct: 84, yPct: 30 },
+  { id: "badge-1", type: "gymcity", n: 1, name: "Violet City / Falkner", cap: 13, encounterDone: false, xPct: 18, yPct: 30 },
+  { id: "badge-2", type: "gymcity", n: 2, name: "Azalea Town / Bugsy", cap: 17, encounterDone: false, xPct: 20, yPct: 52 },
+  { id: "badge-3", type: "gymcity", n: 3, name: "Goldenrod City / Whitney", cap: 19, encounterDone: false, xPct: 38, yPct: 48 },
+  { id: "badge-4", type: "gymcity", n: 4, name: "Ecruteak City / Morty", cap: 25, encounterDone: false, xPct: 53, yPct: 32 },
+  { id: "badge-5", type: "gymcity", n: 5, name: "Cianwood City / Chuck", cap: 31, encounterDone: false, xPct: 74, yPct: 55 },
+  { id: "badge-6", type: "gymcity", n: 6, name: "Olivine City / Jasmine", cap: 35, encounterDone: false, xPct: 47, yPct: 68 },
+  { id: "badge-7", type: "gymcity", n: 7, name: "Mahogany Town / Pryce", cap: 34, encounterDone: false, xPct: 66, yPct: 26 },
+  { id: "badge-8", type: "gymcity", n: 8, name: "Blackthorn City / Clair", cap: 41, encounterDone: false, xPct: 84, yPct: 30 },
 
-  { id: "city-new-bark", type: "city", name: "New Bark Town", xPct: 90, yPct: 55 },
-  { id: "city-cherrygrove", type: "city", name: "Cherrygrove City", xPct: 74, yPct: 66 },
-  { id: "city-violet", type: "city", name: "Violet City", xPct: 22, yPct: 33 },
-  { id: "city-azalea", type: "city", name: "Azalea Town", xPct: 22, yPct: 59 },
-  { id: "city-goldenrod", type: "city", name: "Goldenrod City", xPct: 38, yPct: 57 },
-  { id: "city-ecruteak", type: "city", name: "Ecruteak City", xPct: 52, yPct: 35 },
-  { id: "city-olivine", type: "city", name: "Olivine City", xPct: 47, yPct: 78 },
-  { id: "city-cianwood", type: "city", name: "Cianwood City", xPct: 17, yPct: 73 },
-  { id: "city-mahogany", type: "city", name: "Mahogany Town", xPct: 69, yPct: 36 },
-  { id: "city-blackthorn", type: "city", name: "Blackthorn City", xPct: 84, yPct: 33 },
+  { id: "city-new-bark", type: "city", name: "New Bark Town", encounterDone: false, xPct: 90, yPct: 55 },
+  { id: "city-cherrygrove", type: "city", name: "Cherrygrove City", encounterDone: false, xPct: 74, yPct: 66 },
 
-  { id: "route-29", type: "route", name: "Route 29", xPct: 83, yPct: 61 },
-  { id: "route-30", type: "route", name: "Route 30", xPct: 72, yPct: 54 },
-  { id: "route-31", type: "route", name: "Route 31", xPct: 31, yPct: 38 },
-  { id: "route-32", type: "route", name: "Route 32", xPct: 21, yPct: 45 },
-  { id: "route-33", type: "route", name: "Route 33", xPct: 25, yPct: 60 },
-  { id: "route-34", type: "route", name: "Route 34", xPct: 38, yPct: 67 },
-  { id: "route-35", type: "route", name: "Route 35", xPct: 39, yPct: 47 },
-  { id: "route-36", type: "route", name: "Route 36", xPct: 43, yPct: 37 },
-  { id: "route-37", type: "route", name: "Route 37", xPct: 49, yPct: 39 },
-  { id: "route-38", type: "route", name: "Route 38", xPct: 45, yPct: 48 },
-  { id: "route-39", type: "route", name: "Route 39", xPct: 47, yPct: 58 },
-  { id: "route-40", type: "route", name: "Route 40", xPct: 36, yPct: 78 },
-  { id: "route-41", type: "route", name: "Route 41", xPct: 23, yPct: 73 },
-  { id: "route-42", type: "route", name: "Route 42", xPct: 61, yPct: 43 },
-  { id: "route-43", type: "route", name: "Route 43", xPct: 66, yPct: 27 },
-  { id: "route-44", type: "route", name: "Route 44", xPct: 75, yPct: 40 },
-  { id: "route-45", type: "route", name: "Route 45", xPct: 84, yPct: 47 },
-  { id: "route-46", type: "route", name: "Route 46", xPct: 78, yPct: 55 },
-  { id: "route-47", type: "route", name: "Route 47", xPct: 17, yPct: 62 },
-  { id: "route-48", type: "route", name: "Route 48", xPct: 26, yPct: 40 },
+  { id: "route-29", type: "route", name: "Route 29", encounterDone: false, xPct: 83, yPct: 61 },
+  { id: "route-30", type: "route", name: "Route 30", encounterDone: false, xPct: 72, yPct: 54 },
+  { id: "route-31", type: "route", name: "Route 31", encounterDone: false, xPct: 31, yPct: 38 },
+  { id: "route-32", type: "route", name: "Route 32", encounterDone: false, xPct: 21, yPct: 45 },
+  { id: "route-33", type: "route", name: "Route 33", encounterDone: false, xPct: 25, yPct: 60 },
+  { id: "route-34", type: "route", name: "Route 34", encounterDone: false, xPct: 38, yPct: 67 },
+  { id: "route-35", type: "route", name: "Route 35", encounterDone: false, xPct: 39, yPct: 47 },
+  { id: "route-36", type: "route", name: "Route 36", encounterDone: false, xPct: 43, yPct: 37 },
+  { id: "route-37", type: "route", name: "Route 37", encounterDone: false, xPct: 49, yPct: 39 },
+  { id: "route-38", type: "route", name: "Route 38", encounterDone: false, xPct: 45, yPct: 48 },
+  { id: "route-39", type: "route", name: "Route 39", encounterDone: false, xPct: 47, yPct: 58 },
+  { id: "route-40", type: "route", name: "Route 40", encounterDone: false, xPct: 36, yPct: 78 },
+  { id: "route-41", type: "route", name: "Route 41", encounterDone: false, xPct: 23, yPct: 73 },
+  { id: "route-42", type: "route", name: "Route 42", encounterDone: false, xPct: 61, yPct: 43 },
+  { id: "route-43", type: "route", name: "Route 43", encounterDone: false, xPct: 66, yPct: 17 },
+  { id: "route-44", type: "route", name: "Route 44", encounterDone: false, xPct: 75, yPct: 40 },
+  { id: "route-45", type: "route", name: "Route 45", encounterDone: false, xPct: 84, yPct: 47 },
+  { id: "route-46", type: "route", name: "Route 46", encounterDone: false, xPct: 78, yPct: 55 },
+  { id: "route-47", type: "route", name: "Route 47", encounterDone: false, xPct: 17, yPct: 62 },
+  { id: "route-48", type: "route", name: "Route 48", encounterDone: false, xPct: 26, yPct: 40 },
 
-  { id: "place-ruins", type: "place", name: "Ruins of Alph", xPct: 30, yPct: 47 },
-  { id: "place-ilex", type: "place", name: "Ilex Forest", xPct: 30, yPct: 61 },
-  { id: "place-national-park", type: "place", name: "National Park", xPct: 39, yPct: 42 },
-  { id: "place-lake-rage", type: "place", name: "Lake of Rage", xPct: 66, yPct: 17 },
-  { id: "place-ice-path", type: "place", name: "Ice Path", xPct: 77, yPct: 33 },
-  { id: "place-dark-cave", type: "place", name: "Dark Cave", xPct: 83, yPct: 45 }
+  { id: "place-ruins", type: "place", name: "Ruins of Alph", encounterDone: false, xPct: 30, yPct: 47 },
+  { id: "place-ilex", type: "place", name: "Ilex Forest", encounterDone: false, xPct: 30, yPct: 61 },
+  { id: "place-national-park", type: "place", name: "National Park", encounterDone: false, xPct: 39, yPct: 42 },
+  { id: "place-lake-rage", type: "place", name: "Lake of Rage", encounterDone: false, xPct: 66, yPct: 17 },
+  { id: "place-ice-path", type: "place", name: "Ice Path", encounterDone: false, xPct: 77, yPct: 33 },
+  { id: "place-dark-cave", type: "place", name: "Dark Cave", encounterDone: false, xPct: 83, yPct: 45 }
 ];
 
 let mapMarkers = loadMapMarkers();
 let mapEditMode = false;
 let selectedMapMarkerId = null;
+let mapNodeSize = Number(localStorage.getItem("soullockeMapNodeSize") || 22);
 
 function loadMapMarkers() {
   try {
     const saved = JSON.parse(localStorage.getItem(MAP_STORAGE_KEY) || "null");
-    if (Array.isArray(saved) && saved.length) return saved;
+    if (Array.isArray(saved) && saved.length) return saved.map(normalizeMapMarker);
   } catch {}
   return structuredClone(DEFAULT_JOHTO_MARKERS);
+}
+
+function normalizeMapMarker(marker) {
+  const normalized = { ...marker };
+  if (normalized.type === "badge") normalized.type = "gymcity";
+  if (typeof normalized.encounterDone !== "boolean") normalized.encounterDone = false;
+  return normalized;
 }
 
 function saveMapMarkers() {
@@ -752,7 +753,7 @@ function saveMapMarkers() {
 
 function getMarkerTypeLabel(type) {
   return {
-    badge: "Arena",
+    gymcity: "Arena/Stadt",
     city: "Stadt",
     route: "Route",
     place: "Ort"
@@ -760,25 +761,41 @@ function getMarkerTypeLabel(type) {
 }
 
 function getMarkerSymbol(marker) {
-  if (marker.type === "badge") return String(marker.n || "★");
+  if (marker.type === "gymcity") return String(marker.n || "★");
   if (marker.type === "city") return "●";
   if (marker.type === "route") return String(marker.name || "").replace(/[^0-9]/g, "") || "R";
   return "◆";
 }
 
+function markerHasEncounter(marker) {
+  return ["gymcity", "city", "route", "place"].includes(marker.type);
+}
+
 function showMapMarkerInfo(marker) {
   selectedMapMarkerId = marker.id;
   const capLine = marker.cap ? `<br>Level-Cap: Lv ${marker.cap}` : "";
+  const encounterLine = markerHasEncounter(marker)
+    ? `<br>Encounter: <strong class="${marker.encounterDone ? "encounterNo" : "encounterYes"}">${marker.encounterDone ? "verbraucht" : "offen"}</strong>`
+    : "";
+
   mapInfoPanel.innerHTML = `
     <strong>${escapeHtml(marker.name || "Unbenannt")}</strong>
     <br>Typ: ${escapeHtml(getMarkerTypeLabel(marker.type))}
     ${capLine}
+    ${encounterLine}
     <br><span class="mapCoordText">X: ${marker.xPct.toFixed(2)}% · Y: ${marker.yPct.toFixed(2)}%</span>
   `;
 }
 
 function renderMapEditorPanel(marker) {
-  if (!mapEditMode) return "";
+  if (!mapEditMode) {
+    if (!marker || !markerHasEncounter(marker)) return "";
+    return `
+      <div class="mapEditorPanel mapQuickPanel">
+        <button id="mapToggleEncounterBtn" type="button">${marker.encounterDone ? "Encounter wieder offen" : "Encounter verbraucht"}</button>
+      </div>
+    `;
+  }
 
   if (!marker) {
     return `
@@ -797,7 +814,7 @@ function renderMapEditorPanel(marker) {
       </label>
       <label>Typ
         <select id="mapEditType">
-          <option value="badge" ${marker.type === "badge" ? "selected" : ""}>Arena</option>
+          <option value="gymcity" ${marker.type === "gymcity" ? "selected" : ""}>Arena/Stadt</option>
           <option value="city" ${marker.type === "city" ? "selected" : ""}>Stadt</option>
           <option value="route" ${marker.type === "route" ? "selected" : ""}>Route</option>
           <option value="place" ${marker.type === "place" ? "selected" : ""}>Ort</option>
@@ -805,6 +822,10 @@ function renderMapEditorPanel(marker) {
       </label>
       <label>Level-Cap
         <input id="mapEditCap" value="${marker.cap || ""}" placeholder="optional">
+      </label>
+      <label class="encounterCheckbox">
+        <input id="mapEditEncounter" type="checkbox" ${marker.encounterDone ? "checked" : ""}>
+        Encounter verbraucht
       </label>
       <div class="mapEditorCoords">X ${marker.xPct.toFixed(2)}% · Y ${marker.yPct.toFixed(2)}%</div>
       <div class="mapEditorActions">
@@ -816,7 +837,19 @@ function renderMapEditorPanel(marker) {
 }
 
 function attachMapEditorPanelEvents(marker) {
-  if (!mapEditMode || !marker) return;
+  if (!marker) return;
+
+  const toggle = document.querySelector("#mapToggleEncounterBtn");
+  if (toggle) {
+    toggle.onclick = () => {
+      marker.encounterDone = !marker.encounterDone;
+      saveMapMarkers();
+      openMap();
+      selectMapMarker(marker.id);
+    };
+  }
+
+  if (!mapEditMode) return;
 
   const apply = document.querySelector("#mapApplyMarkerBtn");
   const del = document.querySelector("#mapDeleteMarkerBtn");
@@ -827,6 +860,8 @@ function attachMapEditorPanelEvents(marker) {
       marker.type = document.querySelector("#mapEditType").value;
       const capValue = document.querySelector("#mapEditCap").value.trim();
       marker.cap = capValue ? Number(capValue) || capValue : "";
+      const encounterInput = document.querySelector("#mapEditEncounter");
+      marker.encounterDone = !!encounterInput?.checked;
       saveMapMarkers();
       openMap();
       selectMapMarker(marker.id);
@@ -859,13 +894,14 @@ function selectMapMarker(markerId) {
 function makeMapHotspot(marker) {
   const spot = document.createElement("button");
   spot.type = "button";
-  spot.className = `mapHotspot mapHotspot-${marker.type}`;
+  spot.className = `mapHotspot mapHotspot-${marker.type} ${marker.encounterDone ? "encounter-done" : "encounter-open"}`;
   if (mapEditMode) spot.classList.add("editable");
   spot.style.left = `${marker.xPct}%`;
   spot.style.top = `${marker.yPct}%`;
+  spot.style.setProperty("--node-size", `${mapNodeSize}px`);
   spot.textContent = getMarkerSymbol(marker);
   spot.dataset.markerId = marker.id;
-  spot.title = marker.name;
+  spot.title = `${marker.name}${markerHasEncounter(marker) ? (marker.encounterDone ? " – Encounter verbraucht" : " – Encounter offen") : ""}`;
 
   spot.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -919,7 +955,8 @@ function addMapMarker(type = "route") {
   const marker = {
     id,
     type,
-    name: type === "route" ? "Neue Route" : type === "city" ? "Neue Stadt" : type === "badge" ? "Neue Arena" : "Neuer Ort",
+    name: type === "route" ? "Neue Route" : type === "city" ? "Neue Stadt" : type === "gymcity" ? "Neue Arena/Stadt" : "Neuer Ort",
+    encounterDone: false,
     xPct: 50,
     yPct: 50
   };
@@ -939,9 +976,13 @@ function openMap() {
   toolbar.className = "mapToolbar";
   toolbar.innerHTML = `
     <button id="mapEditToggleBtn" type="button">${mapEditMode ? "Editor: An" : "Editor: Aus"}</button>
+    <label class="mapSizeControl">Größe
+      <input id="mapNodeSizeInput" type="range" min="14" max="34" value="${mapNodeSize}">
+      <span>${mapNodeSize}px</span>
+    </label>
     <button id="mapAddRouteBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Route</button>
     <button id="mapAddCityBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Stadt</button>
-    <button id="mapAddBadgeBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Arena</button>
+    <button id="mapAddGymCityBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Arena/Stadt</button>
     <button id="mapAddPlaceBtn" type="button" ${mapEditMode ? "" : "disabled"}>+ Ort</button>
     <button id="mapExportBtn" type="button">Export JSON</button>
     <button id="mapResetBtn" type="button">Reset</button>
@@ -958,6 +999,17 @@ function openMap() {
 
   mapMarkers.forEach(marker => hotspotLayer.appendChild(makeMapHotspot(marker)));
 
+  const legend = document.createElement("div");
+  legend.className = "mapLegend";
+  legend.innerHTML = `
+    <span><b class="legendOpen"></b> Encounter offen</span>
+    <span><b class="legendDone"></b> Encounter verbraucht</span>
+    <span><b class="legendGym"></b> Arena/Stadt</span>
+    <span><b class="legendCity"></b> Stadt</span>
+    <span><b class="legendRoute"></b> Route</span>
+    <span><b class="legendPlace"></b> Ort</span>
+  `;
+
   const notice = document.createElement("div");
   notice.className = "mapImageMissingNotice";
   notice.innerHTML = `Kein eigenes Kartenbild gefunden.<br>Lege deine Karte unter <code>public${MAP_IMAGE_PATH}</code> ab.`;
@@ -965,15 +1017,24 @@ function openMap() {
   img.addEventListener("error", () => mapImageContainer.classList.add("missing"), { once: true });
   img.addEventListener("load", () => mapImageContainer.classList.remove("missing"), { once: true });
 
-  mapImageContainer.append(toolbar, img, hotspotLayer, notice);
+  mapImageContainer.append(toolbar, img, hotspotLayer, legend, notice);
 
   document.querySelector("#mapEditToggleBtn").onclick = () => {
     mapEditMode = !mapEditMode;
     openMap();
   };
+
+  const sizeInput = document.querySelector("#mapNodeSizeInput");
+  sizeInput.oninput = () => {
+    mapNodeSize = Number(sizeInput.value);
+    localStorage.setItem("soullockeMapNodeSize", String(mapNodeSize));
+    mapImageContainer.querySelectorAll(".mapHotspot").forEach(el => el.style.setProperty("--node-size", `${mapNodeSize}px`));
+    sizeInput.nextElementSibling.textContent = `${mapNodeSize}px`;
+  };
+
   document.querySelector("#mapAddRouteBtn").onclick = () => addMapMarker("route");
   document.querySelector("#mapAddCityBtn").onclick = () => addMapMarker("city");
-  document.querySelector("#mapAddBadgeBtn").onclick = () => addMapMarker("badge");
+  document.querySelector("#mapAddGymCityBtn").onclick = () => addMapMarker("gymcity");
   document.querySelector("#mapAddPlaceBtn").onclick = () => addMapMarker("place");
   document.querySelector("#mapExportBtn").onclick = exportMapJson;
   document.querySelector("#mapResetBtn").onclick = () => {
@@ -989,7 +1050,7 @@ function openMap() {
   } else {
     mapInfoPanel.innerHTML = mapEditMode
       ? `Editor aktiv: Marker anklicken und ziehen. ${renderMapEditorPanel(null)}`
-      : "Klicke auf einen Marker für Details. Aktiviere Editor, um Marker zu verschieben.";
+      : "Klicke auf einen Marker für Details. Grün = Encounter offen, Rot = Encounter verbraucht.";
   }
 }
 
