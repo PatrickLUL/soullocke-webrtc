@@ -1170,3 +1170,54 @@ body.spotlight .tile:not(.spotlightMain):hover {
     max-height: calc(100vh - 16px);
   }
 }
+
+
+/* v10.2 Links grid fixes */
+.linkGrid {
+  grid-template-columns: unset;
+}
+
+.linksModalInner {
+  width: min(1500px, calc(100vw - 32px));
+}
+
+.linkRow {
+  align-items: stretch;
+}
+
+.linkPokemonCell {
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.linkPokemonCell.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(255,255,255,.22);
+  background: rgba(255,255,255,.88);
+}
+
+.linkPokemonPlaceholder {
+  font-weight: 900;
+  opacity: .85;
+}
+
+.linkActionsCell {
+  min-width: 0;
+}
+
+.linkActionsCell button {
+  min-width: 32px;
+  padding: 6px 8px;
+}
+
+.linkPokemonEditor {
+  z-index: 50000;
+  pointer-events: auto;
+}
+
+.linkPokemonEditor * {
+  pointer-events: auto;
+}

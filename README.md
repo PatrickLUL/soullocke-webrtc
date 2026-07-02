@@ -1,16 +1,18 @@
-# Soullocke WebRTC v10.1-links
+# Soullocke WebRTC v10.2-links-fix
 
-Fix/Neu:
-- SoulLink Tracker ist jetzt ein Popup/Modal über der Seite.
-- Neuer Button oben: `Links`.
-- Tracker nimmt keinen Platz mehr unter dem Stream weg.
-- Pokémon-Auswahl-Popup liegt jetzt sicher über allem.
-- Escape schließt Popup/Modal.
-- Deine Johto-Map-Positionen bleiben eingebaut.
+Fix:
+- Link-Zeilen werden jetzt korrekt aufgebaut.
+- Pokémon-Zellen sind wieder sichtbar und anklickbar.
+- Aktionen ↑ ↓ × bleiben rechts in der Aktionsspalte.
+- Das Pokémon-Auswahl-Popup bleibt über dem Modal.
+- Version oben: v10.2-links.
+
+Ursache:
+CSS `repeat(var(--player-count), ...)` war im Grid unzuverlässig. Die Spalten werden jetzt direkt per JavaScript gesetzt.
 
 Deploy:
 ```bash
 git add .
-git commit -m "move soullink tracker to modal"
+git commit -m "fix soullink tracker grid"
 git push
 ```

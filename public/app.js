@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v10.1-links";
+const APP_VERSION = "v10.2-links";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -1474,6 +1474,14 @@ function getStatusLabel(status) {
   }[status || "empty"] || status;
 }
 
+function getLinkGridColumns(playerCount) {
+  return [
+    "minmax(170px, 1fr)",
+    ...Array.from({ length: playerCount }, () => "minmax(210px, 1.2fr)"),
+    "118px"
+  ].join(" ");
+}
+
 function renderLinkTracker() {
   if (!linkTrackerSection || !linkTable) return;
 
@@ -1485,10 +1493,12 @@ function renderLinkTracker() {
     return;
   }
 
+  const gridColumns = getLinkGridColumns(orderedPlayers.length);
+
   const header = document.createElement("div");
   header.className = "linkGrid linkHeader";
-  header.style.setProperty("--player-count", String(orderedPlayers.length));
-  header.innerHTML = `<div>Ort / Link</div>` + orderedPlayers.map(p => `<div>${escapeHtml(p.name)}</div>`).join("") + `<div></div>`;
+  header.style.gridTemplateColumns = gridColumns;
+  header.innerHTML = `<div>Ort / Link</div>` + orderedPlayers.map(p => `<div>${escapeHtml(p.name)}</div>`).join("") + `<div>Aktion</div>`;
 
   const body = document.createElement("div");
   body.className = "linkRows";
@@ -1496,7 +1506,7 @@ function renderLinkTracker() {
   linkRows.forEach((row, rowIndex) => {
     const line = document.createElement("div");
     line.className = `linkGrid linkRow ${getLinkRowClass(row)}`;
-    line.style.setProperty("--player-count", String(orderedPlayers.length));
+    line.style.gridTemplateColumns = gridColumns;
     line.dataset.rowId = row.id;
 
     const locationCell = document.createElement("div");
@@ -1567,7 +1577,7 @@ function renderLinkTracker() {
 
 function renderLinkPokemonCell(entry) {
   if (!entry || !entry.pokemon) {
-    return `<span class="linkPokemonPlaceholder">Pokémon wählen</span>`;
+    return `<span class="linkPokemonPlaceholder">＋ Pokémon wählen</span>`;
   }
 
   const sprite = tinySpriteUrl(entry.pokemon);
@@ -2071,7 +2081,7 @@ document.body.addEventListener("click", (event) => {
   for (const id of activeStreams.keys()) resumeVideo(id);
 
   const target = event.target;
-  if (target.closest && (target.closest(".slotPopover") || target.closest(".spriteSlot.editable"))) return;
+  if (target.closest && (target.closest(".slotPopover") || target.closest(".linkPokemonEditor") || target.closest(".linkPokemonCell") || target.closest(".spriteSlot.editable"))) return;
   closeSlotPopover();
 
   if (settingsPanel && !settingsPanel.classList.contains("hidden")) {
