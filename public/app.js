@@ -1,5 +1,5 @@
 
-const APP_VERSION = "v8.13-sprites";
+const APP_VERSION = "v8.14-sprites";
 const socket = io();
 
 const roomInput = document.querySelector("#roomInput");
@@ -15,7 +15,7 @@ const mapBtn = document.querySelector("#mapBtn");
 const spotlightBtn = document.querySelector("#spotlightBtn");
 const closeMapBtn = document.querySelector("#closeMapBtn");
 const mapModal = document.querySelector("#mapModal");
-const mapSvgContainer = document.querySelector("#mapSvgContainer");
+const mapImageContainer = document.querySelector("#mapImageContainer");
 const mapInfoPanel = document.querySelector("#mapInfoPanel");
 const mapGameLabel = document.querySelector("#mapGameLabel");
 const settingsBtn = document.querySelector("#settingsBtn");
@@ -677,62 +677,80 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-function buildMapSVG(gameKey) {
+// Positionen der 8 Johto-Stationen als Prozent-Koordinaten (relativ zur
+// Bildgröße), damit sie unabhängig von der tatsächlichen Bildauflösung
+// funktionieren. Das sind grobe Schätzwerte basierend auf der ungefähren
+// Lage der Städte auf der Johto-Karte - nach dem Einfügen deines eigenen
+// Kartenbildes (siehe MAP_IMAGE_PATH unten) am besten per Auge nachjustieren.
+const MAP_IMAGE_PATH = "/map-johto.png";
+
+const JOHTO_HOTSPOTS = [
+  { xPct: 18, yPct: 30 },  // 1 Violet City
+  { xPct: 20, yPct: 52 },  // 2 Azalea Town
+  { xPct: 38, yPct: 48 },  // 3 Goldenrod City
+  { xPct: 53, yPct: 32 },  // 4 Ecruteak City
+  { xPct: 47, yPct: 68 },  // 5 Olivine City
+  { xPct: 74, yPct: 55 },  // 6 Cianwood City
+  { xPct: 66, yPct: 26 },  // 7 Mahogany Town
+  { xPct: 84, yPct: 30 }   // 8 Blackthorn City
+];
+
+function buildMapStations(gameKey) {
   const g = getGame(gameKey);
-
-  // Nur Johto (erste 8 Orden), original gestaltete schematische Karte -
-  // KEINE Nachbildung des echten, urheberrechtlich geschützten Spielkarten-
-  // Artworks. Positionen sind frei gewählt (grober Ost-West-Verlauf,
-  // Anlehnung an die Reihenfolge der Städte), nicht die realen Koordinaten.
-  const positions = [
-    { x: 80,  y: 260, label: g.badgeNames[0], cap: g.badgeCaps[0] },  // Violet City
-    { x: 190, y: 150, label: g.badgeNames[1], cap: g.badgeCaps[1] },  // Azalea Town
-    { x: 340, y: 110, label: g.badgeNames[2], cap: g.badgeCaps[2] },  // Goldenrod City
-    { x: 480, y: 160, label: g.badgeNames[3], cap: g.badgeCaps[3] },  // Ecruteak City
-    { x: 620, y: 110, label: g.badgeNames[4], cap: g.badgeCaps[4] },  // Cianwood City
-    { x: 480, y: 300, label: g.badgeNames[5], cap: g.badgeCaps[5] },  // Olivine City
-    { x: 340, y: 350, label: g.badgeNames[6], cap: g.badgeCaps[6] },  // Mahogany Town
-    { x: 200, y: 400, label: g.badgeNames[7], cap: g.badgeCaps[7] }   // Blackthorn City
-  ].map((p, i) => ({ ...p, n: i + 1 }));
-
-  let routeD = `M ${positions[0].x} ${positions[0].y}`;
-  for (let i = 1; i < positions.length; i++) routeD += ` L ${positions[i].x} ${positions[i].y}`;
-
-  const decor = `
-    <ellipse cx="120" cy="80" rx="40" ry="22" class="mapTree" />
-    <ellipse cx="150" cy="70" rx="30" ry="18" class="mapTree" />
-    <polygon points="560,220 590,270 530,270" class="mapMountain" />
-    <polygon points="600,235 625,270 575,270" class="mapMountain" />
-    <ellipse cx="420" cy="420" rx="34" ry="18" class="mapTree" />
-  `;
-
-  let nodesHtml = "";
-  positions.forEach(p => {
-    nodesHtml += `
-      <g class="mapNode" tabindex="0" data-name="${escapeHtml(p.label)}" data-cap="${p.cap}" data-n="${p.n}">
-        <rect x="${p.x - 22}" y="${p.y - 22}" width="44" height="44" rx="10" class="mapTownBase"></rect>
-        <rect x="${p.x - 22}" y="${p.y - 22}" width="44" height="20" rx="10" class="mapTownRoof"></rect>
-        <text x="${p.x}" y="${p.y + 7}" text-anchor="middle">${p.n}</text>
-      </g>`;
-  });
-
-  return `<svg viewBox="0 0 700 460" xmlns="http://www.w3.org/2000/svg">
-    <rect x="0" y="0" width="700" height="460" class="mapWater" />
-    <path d="M 30 240 C 20 140, 90 40, 220 40 L 640 40 C 670 40, 680 60, 680 90
-             L 680 380 C 680 420, 660 440, 620 440 L 120 440
-             C 60 440, 30 400, 30 340 Z" class="mapLand" />
-    ${decor}
-    <path d="${routeD}" class="mapRoute" />
-    ${nodesHtml}
-    <text x="55" y="475" class="mapSectionLabel">Johto</text>
-  </svg>`;
+  return JOHTO_HOTSPOTS.map((pos, i) => ({
+    ...pos,
+    n: i + 1,
+    label: g.badgeNames[i],
+    cap: g.badgeCaps[i]
+  }));
 }
 
 function openMap() {
   mapGameLabel.textContent = `${getGame(currentGame).label} – Johto`;
-  mapSvgContainer.innerHTML = buildMapSVG(currentGame);
   mapInfoPanel.textContent = "Klicke auf eine Station für Details zu Orden & Level-Cap.";
   mapModal.classList.remove("hidden");
+
+  mapImageContainer.innerHTML = "";
+
+  const img = document.createElement("img");
+  img.className = "mapImage";
+  img.alt = "Johto-Karte";
+  img.src = MAP_IMAGE_PATH;
+
+  const hotspotLayer = document.createElement("div");
+  hotspotLayer.className = "mapHotspotLayer";
+
+  buildMapStations(currentGame).forEach(station => {
+    const spot = document.createElement("button");
+    spot.type = "button";
+    spot.className = "mapHotspot";
+    spot.style.left = `${station.xPct}%`;
+    spot.style.top = `${station.yPct}%`;
+    spot.textContent = String(station.n);
+    spot.dataset.name = station.label;
+    spot.dataset.cap = station.cap;
+    spot.dataset.n = station.n;
+    spot.addEventListener("click", (event) => {
+      event.stopPropagation();
+      mapImageContainer.querySelectorAll(".mapHotspot.selected").forEach(el => el.classList.remove("selected"));
+      spot.classList.add("selected");
+      mapInfoPanel.innerHTML = `<strong>#${station.n} – ${escapeHtml(station.label)}</strong><br>Level-Cap: Lv ${station.cap}`;
+    });
+    hotspotLayer.appendChild(spot);
+  });
+
+  const notice = document.createElement("div");
+  notice.className = "mapImageMissingNotice";
+  notice.innerHTML = `Kein eigenes Kartenbild gefunden.<br>Lege deine eigene Grafik unter <code>public${MAP_IMAGE_PATH}</code> ab (z.B. ein selbst erstellter Screenshot deiner Johto-Karte aus dem Spiel) - danach erscheint sie hier automatisch mit den anklickbaren Stationen.`;
+
+  img.addEventListener("error", () => {
+    mapImageContainer.classList.add("missing");
+  }, { once: true });
+  img.addEventListener("load", () => {
+    mapImageContainer.classList.remove("missing");
+  }, { once: true });
+
+  mapImageContainer.append(img, hotspotLayer, notice);
 }
 
 function closeMap() {
@@ -744,14 +762,6 @@ spotlightBtn.addEventListener("click", toggleSpotlight);
 closeMapBtn.addEventListener("click", closeMap);
 mapModal.addEventListener("click", (event) => {
   if (event.target === mapModal) closeMap();
-});
-
-mapSvgContainer.addEventListener("click", (event) => {
-  const node = event.target.closest(".mapNode");
-  if (!node) return;
-  mapSvgContainer.querySelectorAll(".mapNode.selected").forEach(el => el.classList.remove("selected"));
-  node.classList.add("selected");
-  mapInfoPanel.innerHTML = `<strong>#${node.dataset.n} – ${node.dataset.name}</strong><br>Level-Cap: Lv ${node.dataset.cap}`;
 });
 
 gameSelect.addEventListener("change", () => {

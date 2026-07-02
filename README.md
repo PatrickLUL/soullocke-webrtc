@@ -4,7 +4,7 @@ Private Browser-Spielansicht für bis zu 4 Spieler – gedacht für gemeinsame
 Pokémon SoulLink-/Nuzlocke-Runs per Bildschirmfreigabe (WebRTC) mit
 geteiltem Team-Tracking, Orden/Level-Cap und Karte.
 
-**Aktuelle Version:** v8.13-sprites
+**Aktuelle Version:** v8.14-sprites
 
 ## Features
 
@@ -36,11 +36,15 @@ geteiltem Team-Tracking, Orden/Level-Cap und Karte.
   bis zum ersten Orden (z.B. Lv 13 bis Falkner besiegt ist).
 - **Spielauswahl:** aktuell HeartGold/SoulSilver, Struktur erweiterbar auf
   weitere Editionen (`GAMES`-Objekt in `public/app.js`).
-- **Interaktive Karte (Johto):** eigenständig gestaltete, kartenähnliche
-  Übersicht (Landmasse, Route, Stadt-Icons statt reinem Graphen) der 8
-  Johto-Orden-Stationen, anklickbar für Gym-Leader/Level-Cap-Details. Bewusst
-  ein **originales Design**, keine Nachbildung des echten (urheberrechtlich
-  geschützten) Spielkarten-Artworks. Kanto ist aktuell nicht abgebildet.
+- **Interaktive Karte (Johto):** zeigt ein Kartenbild mit 8 anklickbaren
+  Stationen (Gym-Leader/Level-Cap-Details) als Overlay. **Wichtig:** Aus
+  Urheberrechtsgründen enthält das Projekt keine echte Spielkarten-Grafik -
+  lege dein eigenes Kartenbild (z.B. ein selbst erstellter Screenshot aus
+  deinem eigenen Spiel) unter `public/map-johto.png` ab, dann erscheint es
+  automatisch mit den Hotspots. Ohne Bild zeigt das Karten-Modal einen
+  Hinweistext mit dem erwarteten Dateipfad. Die Hotspot-Positionen (Prozent-
+  Koordinaten) lassen sich im `JOHTO_HOTSPOTS`-Array in `public/app.js`
+  per Auge nachjustieren, sobald dein Bild eingefügt ist.
 - **JSON-Export:** Team-Status (lebendig/tot/geboxt), Orden, Level-Cap und
   gewähltes Spiel für alle Spieler als Datei herunterladbar.
 - **Debug-Toggle:** Verbindungs-/Stream-Debug-Infos pro Kachel global ein-/ausblendbar.
@@ -86,6 +90,12 @@ neu deployed werden, damit neue Socket-Events greifen.
 
 ## Versionsverlauf
 
+- **v8.14** – Karte umgebaut von eigenständig gezeichnetem SVG auf ein
+  Bild+Hotspot-System: zeigt jetzt ein reines `<img>`-Kartenbild mit 8
+  anklickbaren Stationen als Overlay. Die eigentliche Kartengrafik ist
+  **nicht** im Projekt enthalten (Nintendo/Game-Freak-Artwork ist
+  urheberrechtlich geschützt) - muss selbst unter `public/map-johto.png`
+  ergänzt werden. Siehe Hinweis unter "Interaktive Karte" oben.
 - **v8.13** – Friedhof/Box von einklappbarer Zeile (kostete vertikalen Platz
   im Stream) zu kompaktem Button + Popup neben dem Team umgebaut. **Bugfix:**
   Level-Cap war einen Orden "hinterher" (0/16 zeigte "Start" statt Lv 13,

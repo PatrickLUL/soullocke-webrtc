@@ -412,67 +412,82 @@ body.spotlight .tile:not(.spotlightMain):hover {
   padding: 0;
 }
 
-.mapSvgContainer { width: 100%; }
-.mapSvgContainer svg { width: 100%; height: auto; display: block; }
-
-.mapWater { fill: #1a3448; }
-
-.mapLand {
-  fill: #2f5c3f;
-  stroke: rgba(0,0,0,.35);
-  stroke-width: 2;
+.mapImageContainer {
+  position: relative;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a0a12;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.mapTree { fill: #244a30; opacity: .8; }
-.mapMountain { fill: #4a4a52; stroke: rgba(0,0,0,.3); stroke-width: 1; }
-
-.mapRoute {
-  fill: none;
-  stroke: #e8d9a8;
-  stroke-width: 7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.mapImage {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
-.mapSectionLabel {
-  fill: rgba(255,255,255,.8);
-  font-size: 15px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .08em;
+.mapImageContainer.missing .mapImage,
+.mapImageContainer.missing .mapHotspotLayer {
+  display: none;
 }
 
-.mapTownBase {
-  fill: rgba(155,80,255,.8);
-  stroke: rgba(255,255,255,.5);
-  stroke-width: 1.5;
-  cursor: pointer;
-  transition: fill .15s ease;
-}
-
-.mapTownRoof {
-  fill: rgba(90,40,170,.9);
-  pointer-events: none;
-}
-
-.mapNode text {
-  fill: white;
+.mapImageMissingNotice {
+  display: none;
+  padding: 24px;
+  text-align: center;
   font-size: 13px;
-  font-weight: 800;
+  line-height: 1.6;
+  color: rgba(255,255,255,.65);
+}
+
+.mapImageMissingNotice code {
+  background: rgba(255,255,255,.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #ffd24a;
+}
+
+.mapImageContainer.missing .mapImageMissingNotice {
+  display: block;
+}
+
+.mapHotspotLayer {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
 }
 
-.mapNode:hover .mapTownBase,
-.mapNode:focus .mapTownBase {
-  fill: rgba(180,110,255,.95);
+.mapHotspot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: rgba(155,80,255,.85);
+  border: 1.5px solid rgba(255,255,255,.6);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,.5);
+  transition: background .15s ease, transform .15s ease;
 }
 
-.mapNode.selected .mapTownBase {
-  fill: #21a957;
+.mapHotspot:hover,
+.mapHotspot:focus {
+  background: rgba(180,110,255,.95);
+  transform: translate(-50%, -50%) scale(1.12);
 }
 
-.mapNode.selected .mapTownRoof {
-  fill: #157a3d;
+.mapHotspot.selected {
+  background: #21a957;
 }
 
 .mapInfoPanel {
